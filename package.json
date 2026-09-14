@@ -1,0 +1,31 @@
+{
+  "name": "ai-mobile-builder",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Prompt -> Expo (React Native) ilova. Qurish, tekshirish, do'konga chiqarish.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "npm run -w @amb/db db:generate",
+    "db:push": "npm run -w @amb/db db:push",
+    "db:studio": "npm run -w @amb/db db:studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.13",
+    "typescript": "^5.9.3",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.20.1"
+  }
+}

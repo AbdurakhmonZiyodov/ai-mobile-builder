@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist/
+.amb-web/
+.amb-bundle/
+*.log
+.env
+expo-env.d.ts

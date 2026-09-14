@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Yangi ilova",
+    "slug": "amb-new-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ambapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "uz.amb.newapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "uz.amb.newapp",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
