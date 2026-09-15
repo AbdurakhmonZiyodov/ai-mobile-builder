@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -9,8 +10,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * va'damizga zid.
  *
  * Bu yerga faqat `anon` kalit tushadi. `service_role` kaliti RLS'ni
- * butunlay chetlab o'tadi va u hech qachon ilova kodiga kirmaydi — faqat
- * serverda, sxema yaratish paytida ishlatiladi va keyin o'chiriladi.
+ * butunlay chetlab o'tadi va u hech qachon ilova kodiga kirmaydi.
  */
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -34,9 +34,24 @@ export function getSupabase(): SupabaseClient {
       "Supabase sozlanmagan. .env faylga EXPO_PUBLIC_SUPABASE_URL va EXPO_PUBLIC_SUPABASE_ANON_KEY qo'shing.",
     );
   }
+
   if (!client) {
     client = createClient(URL, ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true },
+      auth: {
+        /**
+         * React Native'da `localStorage` yo'q.
+         *
+         * Bu adapter ko'rsatilmasa, supabase-js seansni saqlay olmaydi va
+         * foydalanuvchi ilovani har ochganda qaytadan kirishga majbur
+         * bo'ladi. Veb preview'da bu ko'rinmaydi — faqat qurilmada
+         * chiqadi, ya'ni eng kech payt.
+         */
+        storage: AsyncStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        /** URL'dan seans o'qish faqat veb uchun. */
+        detectSessionInUrl: false,
+      },
     });
   }
   return client;

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { APP_CONFIG, type AppConfig } from "../../config/configuration.js";
 import { GatewayProvider } from "./providers/gateway.provider.js";
+import { classifyLlmError } from "./llm-error.js";
 import type { GenerateOptions, GenerateResult, ModelTier } from "./llm.types.js";
 
 /**
@@ -26,8 +27,23 @@ export class LlmService {
     );
   }
 
-  generate(opts: GenerateOptions): Promise<GenerateResult> {
-    return this.provider.generate(opts);
+  /**
+   * Har chaqiruv `LlmError` bilan yiqiladi — xom provayder xatosi
+   * yuqoriga chiqmaydi. Shunda agent tsikli sababni biladi va mijozga
+   * to'g'ri xabar beradi.
+   */
+  async generate(opts: GenerateOptions): Promise<GenerateResult> {
+    try {
+      return await this.provider.generate(opts);
+    } catch (err) {
+      const classified = classifyLlmError(err);
+      this.logger.error(
+        `Model xatosi (${classified.kind}, tier=${opts.tier}): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      throw classified;
+    }
   }
 
   modelIdFor(tier: ModelTier): string {

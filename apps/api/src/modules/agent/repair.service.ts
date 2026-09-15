@@ -54,6 +54,13 @@ export class RepairService {
     let tier = input.startTier;
     let previousDigest = "";
 
+    // Muhit nosozligini model tuzata olmaydi — uchta bepul urinishni
+    // bekorga sarflamaymiz.
+    if (report.unavailable) {
+      this.logger.error(`Tekshiruv o'tkazib bo'lmadi: ${report.unavailableReasonUz ?? ""}`);
+      return { verify: report, attempts: 0, costCents: 0 };
+    }
+
     while (!report.ok && attempts < MAX_REPAIR_ATTEMPTS) {
       attempts += 1;
 
@@ -92,6 +99,7 @@ export class RepairService {
       costCents += result.costCents;
 
       report = await this.runVerify(input);
+      if (report.unavailable) break;
     }
 
     return { verify: report, attempts, costCents };

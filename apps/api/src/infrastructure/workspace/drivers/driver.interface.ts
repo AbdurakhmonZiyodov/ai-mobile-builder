@@ -41,7 +41,26 @@ export interface WorkspaceDriver {
 
   exec(cmd: string, args: string[], opts?: { timeoutMs?: number; cwd?: string }): Promise<ExecResult>;
 
-  /** Har xabardan keyin git commit — ma'lumot yo'qolmasin (spek 16.1). */
+  /**
+   * Loyihaning `node_modules/.bin` idagi vositani topadi.
+   *
+   * Yo'q bo'lsa `null` — bu muhit nosozligi va tekshiruv uni shunday
+   * xabar qiladi. `npm exec` ishlatilmaydi: u vosita topilmasa REYESTRDAN
+   * shu nomli paketni yuklab ishga tushiradi. Amalda `tsc` uchun bu
+   * TypeScript'ga aloqasi yo'q begona paketni bajardi.
+   */
+  resolveBin(name: string): Promise<string | null>;
+
+  /** Har xabardan keyin git commit — ma'lumot yo'qolmasin. */
   commit(message: string): Promise<string | null>;
   revertTo(versionId: string): Promise<void>;
+
+  /**
+   * Commit qilinmagan o'zgarishlarni tashlab yuboradi.
+   *
+   * Verify gate o'tmaganda MAJBURIY: aks holda buzuq fayllar diskda qoladi,
+   * preview ulardan qayta yig'iladi va keyingi muvaffaqiyatli run'ning
+   * `git add -A` si ularni begona versiyaga qo'shib yuboradi.
+   */
+  discardUncommitted(): Promise<void>;
 }

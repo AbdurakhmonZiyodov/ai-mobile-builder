@@ -1,3 +1,9 @@
+// supabase-js React Native'da `URL` va `URLSearchParams` ga tayanadi,
+// Hermes esa ularni to'liq bermaydi. Polyfill ilovaning ENG BIRINCHI
+// import'i bo'lishi shart — aks holda tarmoq so'rovlari qurilmada
+// jimgina ishlamay qoladi.
+import "react-native-url-polyfill/auto";
+
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";

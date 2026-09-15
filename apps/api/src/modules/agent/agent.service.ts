@@ -168,6 +168,13 @@ export class AgentService {
       return settle(result.text, null, null);
     }
 
+    // Design mode'da faqat DESIGN.md o'zgaradi — ilova kodi tegilmagan,
+    // shuning uchun typecheck, lint va bundle o'tkazish ortiqcha vaqt.
+    if (kind === "design") {
+      const designSha = await ws.commit(`design: ${input.prompt.slice(0, 72)}`);
+      return settle(result.text, null, designSha);
+    }
+
     // --- 6. Verify gate va bepul tuzatish --------------------------------
     const repaired = await this.repair.verifyAndRepair({
       ws,
@@ -181,11 +188,31 @@ export class AgentService {
 
     // --- 7. Halol to'xtash ------------------------------------------------
     if (!repaired.verify.ok) {
+      const lastGood = await this.currentSha(ws);
+      await ws.discardUncommitted();
+
+      // Muhit nosozligi — bu bizning xatomiz, model aybdor emas.
+      // Mijozga "kodingizda xato" deb aytish yolg'on bo'lardi.
+      if (repaired.verify.unavailable) {
+        this.logger.error(`${runId}: ${repaired.verify.unavailableReasonUz}`);
+        emit({
+          type: "error",
+          messageUz:
+            "Ilovangizni tekshirib bo'lmadi — bu bizning tomondagi nosozlik, sizning kodingizda emas. O'zgarish saqlanmadi va hisoblanmadi. Biroz kutib qayta urinib ko'ring.",
+        });
+        return settle(result.text, repaired.verify, null, repaired.attempts, false);
+      }
+
+      // Buzuq fayllar yuqorida allaqachon bekor qilindi: aks holda preview
+      // ulardan qayta yig'ilardi va keyingi muvaffaqiyatli run'ning
+      // `git add -A` si ularni begona versiyaga qo'shib yuborardi.
+      this.logger.warn(`${runId}: verify o'tmadi, o'zgarishlar bekor qilindi`);
+
       emit({
         type: "repair.gaveUp",
         messageUz:
-          "Bu xatoni hal qila olmadim. Oxirgi ishlagan versiyaga qaytaraymi? Bu o'zgarish hisoblanmadi.",
-        lastGoodVersionId: await this.currentSha(ws),
+          "Bu xatoni hal qila olmadim, shuning uchun o'zgarishlarni bekor qildim — ilovangiz oldingi ishlaydigan holatida turibdi. Bu o'zgarish hisoblanmadi. Boshqacha aytib ko'rasizmi?",
+        lastGoodVersionId: lastGood,
       });
       return settle(result.text, repaired.verify, null, repaired.attempts, false);
     }

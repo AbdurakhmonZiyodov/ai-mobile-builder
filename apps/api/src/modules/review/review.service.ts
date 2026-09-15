@@ -8,6 +8,15 @@ import type { CheckerFile, CheckerInput, Finding, ReviewReport, Severity } from 
 /** Tekshiriladigan fayllarning eng ko'p soni — katta loyihada ham tez ishlasin. */
 const MAX_FILES = 300;
 
+/**
+ * Tekshiruvdan chetlatiladigan fayllar.
+ *
+ * Lock fayllar yuzlab paket nomini o'z ichiga oladi va kalit so'z
+ * qidiruvida soxta natija beradi: `package-lock.json` 435 KB va unda
+ * "pay", "auth", "camera" kabi so'zlar albatta uchraydi.
+ */
+const EXCLUDED = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
+
 /** Har blokerning o'tish ehtimoliga ta'siri. */
 const BLOCKER_WEIGHT = 0.35;
 const WARNING_WEIGHT = 0.08;
@@ -65,7 +74,7 @@ export class ReviewService {
     read: (p: string) => Promise<string>;
   }): Promise<CheckerFile[]> {
     const entries = (await ws.tree()).filter(
-      (e) => e.type === "file" && /\.(tsx?|jsx?|json)$/.test(e.path),
+      (e) => e.type === "file" && /\.(tsx?|jsx?|json)$/.test(e.path) && !EXCLUDED.test(e.path),
     );
 
     const files: CheckerFile[] = [];

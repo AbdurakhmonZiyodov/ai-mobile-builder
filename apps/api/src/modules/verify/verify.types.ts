@@ -13,6 +13,8 @@ export interface StepResult {
    */
   skipped: boolean;
   skipReasonUz?: string;
+  /** Vosita topilmadi — bu muhit nosozligi, kod xatosi emas. */
+  unavailable?: boolean;
 }
 
 export interface VerifyReport {
@@ -20,6 +22,18 @@ export interface VerifyReport {
   steps: StepResult[];
   /** Model uchun bitta matn — tuzatish tsikliga shu beriladi. */
   errorDigest: string;
+  /**
+   * Tekshiruvni O'TKAZIB BO'LMADI — vosita topilmadi yoki muhit buzuq.
+   *
+   * Bu modelning xatosi emas, shuning uchun tuzatish tsikli ishga
+   * tushmaydi: agent muhit xatosini tuzata olmaydi va uchta bepul
+   * urinishni bekorga sarflaydi.
+   *
+   * `ok` doim `false` bo'ladi — tekshirilmagan kod uchun pul olinmaydi.
+   */
+  unavailable: boolean;
+  /** Mijozga ko'rsatiladigan sabab (faqat `unavailable` bo'lganda). */
+  unavailableReasonUz?: string;
 }
 
 export interface VerifyOptions {

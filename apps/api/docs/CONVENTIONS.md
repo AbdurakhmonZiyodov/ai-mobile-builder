@@ -59,17 +59,27 @@ Global filtr (`common/filters/http-exception.filter.ts`) ularni bir xil
 shaklga soladi. Texnik tafsilot faqat development'da qo'shiladi —
 ishlab chiqarishda u ichki tuzilma haqida ma'lumot sizdiradi.
 
-## `npm exec` va `--`
+## Workspace ichida vosita ishga tushirish
 
-```bash
-npm exec eslint . --max-warnings 0       # ✗ NOTO'G'RI
-npm exec -- eslint . --max-warnings 0    # ✓ TO'G'RI
+`npm exec` **ishlatilmaydi**. Vosita `node_modules/.bin` dan
+to'g'ridan-to'g'ri chaqiriladi:
+
+```ts
+const bin = await ws.resolveBin("tsc");
+if (!bin) { /* muhit nosozligi — tekshiruv o'tkazilmadi deb belgilanadi */ }
+await ws.exec(bin, ["--noEmit", "--pretty", "false"]);
 ```
 
-Birinchisida npm `--max-warnings 0` ni **o'zining** bayrog'i deb oladi va
-ESLint «0» nomli faylni qidiradi. Natijada verify gate soxta xato beradi,
-agent tuzata olmaydigan narsani tuzatishga urinadi va uch bepul urinishni
-bekorga sarflaydi. Bu amalda uchragan xato.
+Ikki sabab, ikkalasi ham amalda uchragan:
+
+1. **`npm exec` reyestrdan paket yuklab bajaradi.** Vosita loyihada
+   topilmasa, npm shu nomli paketni npm'dan olib ishga tushiradi.
+   `tsc` uchun bu TypeScript emas, butunlay begona paket bo'lib chiqdi —
+   tekshiruv tasodifiy kodni bajargan bo'lardi.
+
+2. **`--` esdan chiqsa npm bayroqlarni o'zi yeydi.**
+   `npm exec eslint . --max-warnings 0` da npm `--max-warnings 0` ni
+   o'zining bayrog'i deb oladi va ESLint «0» nomli faylni qidiradi.
 
 ## Test
 

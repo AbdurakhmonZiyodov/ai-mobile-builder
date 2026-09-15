@@ -60,10 +60,7 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
             return;
           }
           if (event.type === "charge") {
-            setBalance((prev) => ({
-              ...prev,
-              used: prev.included - event.remaining,
-            }));
+            setBalance((prev) => applyCharge(prev, event.units));
           }
           if (event.type === "run.finished") {
             onFinished?.();
@@ -86,4 +83,23 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
   );
 
   return { entries, balance, busy, send };
+}
+
+/**
+ * Hisobni balansga qo'llaydi.
+ *
+ * Avval `used` `remaining` dan hisoblanardi: `used = included - remaining`.
+ * Bu noto'g'ri edi, chunki `remaining` qo'shimcha sotib olingan
+ * o'zgarishlarni ham qo'shadi. Natijada 10/10 sarflangan, lekin 5 ta
+ * qo'shimchasi bor loyihada UI "10 tadan 5 tasi" deb ko'rsatardi.
+ *
+ * Endi server mantiqining aynan o'zi takrorlanadi: avval tarif qoldig'i,
+ * keyin qo'shimchalar.
+ */
+function applyCharge(balance: Balance, units: number): Balance {
+  if (units <= 0) return balance;
+
+  return balance.used < balance.included
+    ? { ...balance, used: balance.used + units }
+    : { ...balance, extraUsed: balance.extraUsed + units };
 }

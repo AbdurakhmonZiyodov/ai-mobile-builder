@@ -1,6 +1,6 @@
 import { generateText, stepCountIs, tool, type ModelMessage } from "ai";
 import { estimateCostCents } from "../model-registry.js";
-import type { GenerateOptions, GenerateResult, ToolResult } from "../llm.types.js";
+import type { ChatMessage, GenerateOptions, GenerateResult, ToolResult } from "../llm.types.js";
 
 /** Tool javobining modelga qaytadigan eng katta hajmi — kontekst byudjeti (8.2). */
 const MAX_TOOL_OUTPUT_CHARS = 16_000;
@@ -48,9 +48,19 @@ export class GatewayProvider {
       ]),
     );
 
+    // AI SDK 7 da `system` rolli xabar `messages` ichida BO'LMAYDI —
+    // u alohida `instructions` orqali beriladi. Aks holda so'rov
+    // `AI_InvalidPromptError` bilan yiqiladi.
+    //
+    // Bizning kontekst qatlami tizim qoidalarini bir necha bo'lakka
+    // ajratadi (qoidalar, MAP.md, suhbat xulosasi, tegishli fayllar),
+    // shuning uchun ularni shu yerda bitta matnga birlashtiramiz.
+    const { instructions, conversation } = splitMessages(opts.messages);
+
     const result = await generateText({
       model: modelId,
-      messages: opts.messages as ModelMessage[],
+      ...(instructions ? { instructions } : {}),
+      messages: conversation as ModelMessage[],
       ...(Object.keys(tools).length > 0 ? { tools } : {}),
       stopWhen: stepCountIs(opts.maxSteps ?? 12),
       temperature: opts.temperature ?? 0.2,
@@ -70,6 +80,36 @@ export class GatewayProvider {
       finishReason: result.finishReason,
     };
   }
+}
+
+interface SplitMessages {
+  instructions: string | undefined;
+  conversation: ChatMessage[];
+}
+
+/**
+ * `system` xabarlarni suhbatdan ajratadi.
+ *
+ * Tartib saqlanadi: bo'laklar bir-biriga tayanadi (masalan «qoidalar»
+ * dan keyin «loyiha xaritasi»), shuning uchun ular yozilgan ketma-ketlikda
+ * birlashtiriladi.
+ */
+function splitMessages(messages: ChatMessage[]): SplitMessages {
+  const systemParts: string[] = [];
+  const conversation: ChatMessage[] = [];
+
+  for (const message of messages) {
+    if (message.role === "system") {
+      systemParts.push(message.content);
+    } else {
+      conversation.push(message);
+    }
+  }
+
+  return {
+    instructions: systemParts.length > 0 ? systemParts.join("\n\n") : undefined,
+    conversation,
+  };
 }
 
 function preview(args: unknown): string {

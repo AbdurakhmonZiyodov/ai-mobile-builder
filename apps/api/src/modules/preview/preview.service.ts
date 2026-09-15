@@ -67,10 +67,23 @@ export class PreviewService {
     const ws = this.workspaces.get(project.id);
     const started = Date.now();
 
-    // `exec` dan keyin `--` majburiy, aks holda npm bayroqlarni o'zi yeb qo'yadi.
+    // `expo` loyihaning o'z `node_modules/.bin` idan ishga tushiriladi.
+    // `npm exec` ishlatilmaydi: vosita topilmasa u reyestrdan shu nomli
+    // paketni yuklab bajaradi.
+    const expo = await ws.resolveBin("expo");
+    if (!expo) {
+      return {
+        ok: false,
+        url: null,
+        durationMs: Date.now() - started,
+        messageUz:
+          "Preview yig'ish vositasi topilmadi — bu bizning tomondagi nosozlik, sizning kodingizda emas.",
+      };
+    }
+
     const result = await ws.exec(
-      "npm",
-      ["exec", "--", "expo", "export", "--platform", "web", "--output-dir", WEB_OUTPUT_DIR],
+      expo,
+      ["export", "--platform", "web", "--output-dir", WEB_OUTPUT_DIR],
       { timeoutMs: 300_000 },
     );
 

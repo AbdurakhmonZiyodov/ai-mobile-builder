@@ -2,6 +2,7 @@ import { Controller, Logger, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { sendMessageInput, type AgentEvent, type SendMessageInput } from "@amb/contracts";
 import { ID } from "@amb/core-rules";
+import { LlmError } from "../../infrastructure/llm/llm-error.js";
 import { ZodBody } from "../../common/decorators/zod-body.decorator.js";
 import { BillingService } from "../billing/billing.service.js";
 import { ProjectsRepository } from "../projects/projects.repository.js";
@@ -71,9 +72,15 @@ export class AgentController {
       await this.persist(project.id, dto.text, result);
     } catch (err) {
       this.logger.error("Agent tsikli yiqildi", err instanceof Error ? err.stack : String(err));
+
+      // Model xatosi aniq sababga ega — mijozga "kutilmagan xatolik"
+      // deyish uni o'z so'rovida xato qildim deb o'ylashga majbur qiladi.
       emit({
         type: "error",
-        messageUz: "Kutilmagan xatolik yuz berdi. Bu o'zgarish hisoblanmadi.",
+        messageUz:
+          err instanceof LlmError
+            ? err.messageUz
+            : "Kutilmagan xatolik yuz berdi. O'zgarish saqlanmadi va hisoblanmadi.",
       });
     } finally {
       res.end();

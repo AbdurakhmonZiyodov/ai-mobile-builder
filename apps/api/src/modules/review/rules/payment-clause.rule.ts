@@ -1,6 +1,16 @@
 import { allSource, type Rule } from "../review.types.js";
 
-const EXTERNAL_PAY = /payme|click\.uz|uzum|paynet|checkout\.stripe|openURL\(.*pay/i;
+/**
+ * Tashqi to'lov provayderlari.
+ *
+ * Naqshlar CHEGARA bilan yozilgan. Avval `payme` oddiy qism-satr edi va
+ * inglizcha `payment`, `paymentSheet`, `handlePayment` so'zlarini ham
+ * tutardi — natijada har raqamli mahsulot loyihasiga soxta 3.1.1 blokeri
+ * chiqardi va o'tish ehtimoli 35% ga tushardi.
+ */
+const EXTERNAL_PAY =
+  /\bpayme\b|payme\.uz|click\.uz|\bclickuz\b|\buzum\b|\bpaynet\b|checkout\.stripe|openURL\([^)]*\b(?:payme|click|uzum|paynet)\b/i;
+
 const IN_APP_PURCHASE = /react-native-purchases|expo-in-app-purchases|Purchases\./i;
 
 /**

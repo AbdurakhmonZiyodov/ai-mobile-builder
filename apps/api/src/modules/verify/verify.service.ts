@@ -4,17 +4,20 @@ import { extractErrors } from "./error-extractor.js";
 import type { StepResult, VerifyOptions, VerifyReport, VerifyStep } from "./verify.types.js";
 
 /**
- * `npm exec` dan keyin `--` MAJBURIY.
+ * Har qadam uchun vosita va uning bayroqlari.
  *
- * Usiz npm `--max-warnings 0` ni o'zining bayrog'i deb oladi va vosita
- * "0" nomli faylni qidiradi. Natijada verify gate soxta xato beradi,
- * agent tuzata olmaydigan narsani tuzatishga urinadi va o'zgarish
- * bekorga hisoblanmay qoladi. Bu amalda uchragan xato.
+ * Vositalar loyihaning `node_modules/.bin` idan TO'G'RIDAN-TO'G'RI
+ * ishga tushiriladi, `npm exec` orqali emas. Sabab: `npm exec` vosita
+ * topilmasa reyestrdan shu nomli paketni yuklab bajaradi — `tsc` uchun
+ * bu TypeScript'ga aloqasi yo'q begona paket bo'lib chiqdi.
  */
-const COMMANDS: Record<VerifyStep, string[]> = {
-  typecheck: ["exec", "--", "tsc", "--noEmit", "--pretty", "false"],
-  lint: ["exec", "--", "eslint", ".", "--max-warnings", "0"],
-  bundle: ["exec", "--", "expo", "export", "--platform", "web", "--output-dir", ".amb-bundle"],
+const COMMANDS: Record<VerifyStep, { bin: string; args: string[] }> = {
+  typecheck: { bin: "tsc", args: ["--noEmit", "--pretty", "false"] },
+  lint: { bin: "eslint", args: [".", "--max-warnings", "0"] },
+  bundle: {
+    bin: "expo",
+    args: ["export", "--platform", "web", "--output-dir", ".amb-bundle"],
+  },
 };
 
 const TIMEOUT_MS: Record<VerifyStep, number> = {
@@ -50,11 +53,25 @@ export class VerifyService {
 
     steps.push(await this.resolveBundleStep(ws, steps, options));
 
+    const unavailable = steps.find((s) => s.unavailable);
+    if (unavailable) {
+      // Tekshirilmagan kodni "o'tdi" deb ko'rsatish mumkin emas: mijoz
+      // buzuq ilovani tayyor deb o'ylaydi va buni do'konda biladi.
+      return {
+        ok: false,
+        steps,
+        errorDigest: "",
+        unavailable: true,
+        unavailableReasonUz: `Tekshiruvni o'tkazib bo'lmadi: ${unavailable.skipReasonUz ?? "vosita topilmadi"}.`,
+      };
+    }
+
     const failed = steps.filter((s) => !s.ok);
     return {
       ok: failed.length === 0,
       steps,
       errorDigest: buildDigest(failed),
+      unavailable: false,
     };
   }
 
@@ -79,17 +96,44 @@ export class VerifyService {
   ): Promise<StepResult> {
     options.onStepStart?.(step);
     const started = Date.now();
+    const command = COMMANDS[step];
 
-    const result = await ws.exec("npm", COMMANDS[step], {
+    // Vosita loyihada bormi — oldindan tekshiramiz.
+    //
+    // Avval bu holat "o'tkazib yuborildi, gate o'tdi" deb belgilanardi.
+    // Natijada noto'g'ri sozlangan serverda HAR RUN "tekshirildi" deb
+    // ko'rsatilardi va tekshirilmagan kod uchun pul olinardi.
+    const bin = await ws.resolveBin(command.bin);
+    if (!bin) {
+      const reasonUz = `"${command.bin}" vositasi loyihada topilmadi`;
+      this.logger.error(`${reasonUz}. Workspace bog'liqliklari o'rnatilganmi?`);
+      return this.finish(
+        {
+          step,
+          ok: false,
+          errors: [reasonUz],
+          durationMs: 0,
+          skipped: false,
+          unavailable: true,
+          skipReasonUz: reasonUz,
+        },
+        options,
+      );
+    }
+
+    const result = await ws.exec(bin, command.args, {
       timeoutMs: options.timeoutMs ?? TIMEOUT_MS[step],
     });
     const durationMs = Date.now() - started;
 
-    // Vosita o'rnatilmagan bo'lsa gate'ni YOLG'ON yiqitmaymiz.
-    const missing = result.code === 127 || /command not found|could not determine executable/i.test(result.stderr);
-    if (missing) {
-      this.logger.warn(`${step}: vosita topilmadi, o'tkazib yuborildi`);
-      return this.finish({ step, ok: true, errors: [], durationMs, skipped: true }, options);
+    // Vosita bor edi, lekin ishga tushmadi — bu ham muhit nosozligi.
+    if (result.code === 127 || /ENOENT|EACCES/i.test(result.stderr)) {
+      const reasonUz = `"${command.bin}" ishga tushmadi`;
+      this.logger.error(reasonUz);
+      return this.finish(
+        { step, ok: false, errors: [reasonUz], durationMs, skipped: false, unavailable: true, skipReasonUz: reasonUz },
+        options,
+      );
     }
 
     const ok = result.code === 0 && !result.timedOut;

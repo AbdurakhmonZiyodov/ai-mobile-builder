@@ -74,6 +74,10 @@ export class BackendConnectionService {
   }
 
   async status(projectId: string): Promise<BackendStatusDto> {
+    // Loyiha mavjudligini tekshiramiz: aks holda noto'g'ri ID uchun
+    // 404 o'rniga 200 "ulanmagan" qaytardi va mijoz xatoni ko'rmasdi.
+    await this.projects.findOrFail(projectId);
+
     const row = await this.repository.findByProject(projectId);
     if (!row) return { connected: false };
 

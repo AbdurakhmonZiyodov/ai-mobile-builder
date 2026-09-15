@@ -5,7 +5,10 @@ import { buildArchitectureMd, buildHandoffMd, buildReadmeMd } from "./handoff.te
 
 export interface HandoffResult {
   ok: boolean;
-  files: string[];
+  /** Shu run'da YOZILGAN fayllar. */
+  generated: string[];
+  /** Loyihada allaqachon bor va paketning bir qismi bo'lgan fayllar. */
+  included: string[];
   gitSha: string | null;
   messageUz: string;
 }
@@ -44,7 +47,10 @@ export class HandoffService {
 
     return {
       ok: true,
-      files: ["README.md", "ARCHITECTURE.md", "HANDOFF.md", ".env.example"],
+      // Faqat shu yerda yozilganlar. Avval ro'yxatga `.env.example` ham
+      // kiritilgan edi — u shablondan keladi, bu run uni yozmaydi.
+      generated: ["README.md", "ARCHITECTURE.md", "HANDOFF.md"],
+      included: [".env.example", "SDK.md"],
       gitSha,
       messageUz:
         "Topshirish paketi tayyor. Endi dasturchiga «menga ilova kerak» emas, «mana kod, mana hujjat, mana qolgan ishlar» deb ayta olasiz.",

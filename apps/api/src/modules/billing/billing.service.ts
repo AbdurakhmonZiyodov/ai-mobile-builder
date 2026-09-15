@@ -75,12 +75,12 @@ export class BillingService {
   /**
    * Hisobni bazaga yozadi.
    *
-   * Avval tarif ichidagi qoldiqdan yechiladi, keyin sotib olingan
-   * qo'shimchalardan — qo'shimchalar yonmaydi, shuning uchun ular
-   * oxirida sarflansa mijoz uchun foydaliroq.
+   * Qaytadi: hisob amalga oshdimi. `false` bo'lsa — qoldiq tugagan
+   * (masalan ikki so'rov bir vaqtda kelgan). Bunda mijozdan pul
+   * olinmaydi: kamroq olganimiz ortiqcha olganimizdan yaxshi.
    */
-  async commit(projectId: string, units: 0 | 1): Promise<void> {
-    if (units === 0) return;
-    await this.repository.consumeOneChange(projectId);
+  async commit(projectId: string, units: 0 | 1): Promise<boolean> {
+    if (units === 0) return true;
+    return this.repository.consumeOneChange(projectId);
   }
 }

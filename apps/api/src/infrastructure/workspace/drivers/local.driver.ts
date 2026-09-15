@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import type { EditResult, ExecResult, FileEntry, WorkspaceDriver } from "./driver.interface.js";
 
@@ -52,9 +53,21 @@ export class LocalWorkspace implements WorkspaceDriver {
 
   async create(templateDir: string): Promise<void> {
     await fs.mkdir(this.root, { recursive: true });
-    await fs.cp(templateDir, this.root, {
+    // Filtr NISBIY yo'l bo'yicha tekshiriladi.
+    //
+    // Avval absolut yo'l bo'laklari tekshirilardi. Agar repo `build` yoki
+    // `dist` nomli papka ichida joylashsa (masalan `/opt/build/amb/`),
+    // filtr ildizning o'zini rad etardi: `fs.cp` hech nima ko'chirmasdan
+    // muvaffaqiyatli tugardi va agent bo'sh workspace'da ishlay boshlardi —
+    // hech qayerda xato chiqmasdan.
+    const templateRoot = path.resolve(templateDir);
+    await fs.cp(templateRoot, this.root, {
       recursive: true,
-      filter: (src) => !src.split(path.sep).some((seg) => IGNORED.has(seg)),
+      filter: (src) => {
+        const rel = path.relative(templateRoot, src);
+        if (rel === "") return true; // ildizning o'zi
+        return !rel.split(path.sep).some((seg) => IGNORED.has(seg));
+      },
     });
     await this.linkDependencies(templateDir);
     await this.exec("git", ["init", "-q"]);
@@ -187,9 +200,24 @@ export class LocalWorkspace implements WorkspaceDriver {
     return { path: rel, added, removed, action: "edit" };
   }
 
+  /**
+   * Faylni o'chiradi.
+   *
+   * Mavjud bo'lmagan fayl uchun XATO beradi. Avval `force: true` bilan
+   * jimgina o'tib ketardi va natijada o'chirilmagan fayl uchun
+   * "o'zgarish bo'ldi" deb yozilardi: model xayoliy yo'lni aytsa,
+   * mijozdan hech qanday diff bermagan run uchun pul olinardi.
+   */
   async remove(rel: string): Promise<EditResult> {
     const abs = this.resolve(rel);
-    const before = await fs.readFile(abs, "utf8").catch(() => "");
+
+    let before: string;
+    try {
+      before = await fs.readFile(abs, "utf8");
+    } catch {
+      throw new Error(`"${rel}" topilmadi — o'chirish uchun fayl mavjud emas.`);
+    }
+
     await fs.rm(abs, { force: true });
     return { path: rel, added: 0, removed: before.split("\n").length, action: "delete" };
   }
@@ -282,6 +310,28 @@ export class LocalWorkspace implements WorkspaceDriver {
     });
   }
 
+  /**
+   * Vositani loyihaning `node_modules/.bin` idan topadi.
+   *
+   * `npm exec` ATAYLAB ishlatilmaydi. Ikki sabab:
+   *
+   * 1. Vosita topilmasa, u reyestrdan shu nomli paketni yuklab ishga
+   *    tushiradi. `tsc` uchun bu TypeScript emas, butunlay begona paket
+   *    bo'lib chiqdi — tekshiruv tasodifiy kodni bajargan bo'lardi.
+   *
+   * 2. `npm exec` dan keyin `--` qo'yish esdan chiqsa, npm bayroqlarni
+   *    o'zi yeb qo'yadi va vosita ularni ko'rmaydi.
+   */
+  async resolveBin(name: string): Promise<string | null> {
+    const binPath = path.join(this.root, "node_modules", ".bin", name);
+    try {
+      await fs.access(binPath, fsConstants.X_OK);
+      return binPath;
+    } catch {
+      return null;
+    }
+  }
+
   async commit(message: string): Promise<string | null> {
     await this.exec("git", ["add", "-A"]);
     const status = await this.exec("git", ["status", "--porcelain"]);
@@ -290,6 +340,20 @@ export class LocalWorkspace implements WorkspaceDriver {
     if (res.code !== 0) return null;
     const sha = await this.exec("git", ["rev-parse", "HEAD"]);
     return sha.stdout.trim() || null;
+  }
+
+  /**
+   * Commit qilinmagan hamma narsani tashlaydi: tahrirlangan fayllar
+   * `reset --hard`, yangi yaratilganlari `clean -fd` bilan.
+   *
+   * `clean` da `-d` bor, chunki agent yangi papka ham yaratgan bo'lishi
+   * mumkin. `.gitignore` dagi fayllar (`node_modules`, `.amb-cache`)
+   * tegilmaydi — `-x` ataylab qo'yilmagan, aks holda har xatodan keyin
+   * bog'liqliklar va Metro keshi o'chib ketardi.
+   */
+  async discardUncommitted(): Promise<void> {
+    await this.exec("git", ["reset", "--hard", "HEAD"]);
+    await this.exec("git", ["clean", "-fd"]);
   }
 
   async revertTo(versionId: string): Promise<void> {

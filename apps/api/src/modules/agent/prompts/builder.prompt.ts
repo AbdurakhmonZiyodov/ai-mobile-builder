@@ -52,7 +52,7 @@ ${input.designMd || "(bo'sh)"}
 ## PROJECT.md
 ${input.projectMd || "(bo'sh)"}
 
-## ${input.mapMd}`;
+${input.mapMd}`;
 }
 
 function formatDomain(pack: DomainPack): string {
