@@ -19,6 +19,45 @@ module.exports = [
       // urinishini yeb qo'yadi — shuning uchun o'chirilgan.
       "react/no-unescaped-entities": "off",
 
+      /**
+       * `@expo/ui` ning platformaga xos yo'llari TAQIQLANGAN.
+       *
+       * `@expo/ui/swift-ui` va `@expo/ui/jetpack-compose` ichida
+       * `requireNativeView(...)` MODUL DARAJASIDA chaqiriladi — import
+       * paytida tashlaydi. Vebda native modul yo'q, shuning uchun:
+       *
+       *   · `expo export --platform web` MUVAFFAQIYATLI tugaydi (EXIT=0)
+       *   · verify gate yashil bo'ladi va o'zgarish HISOBLANADI
+       *   · mijozning birinchi preview'i BO'SH EKRAN bo'ladi
+       *
+       * Bu empirik tekshirilgan. Universal `@expo/ui` da RN zaxirasi bor
+       * va u uchala platformada ishlaydi.
+       */
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@expo/ui/swift-ui",
+              message:
+                "@expo/ui/swift-ui vebda import paytida yiqiladi va preview bo'sh chiqadi. Universal '@expo/ui' dan import qiling.",
+            },
+            {
+              name: "@expo/ui/jetpack-compose",
+              message:
+                "@expo/ui/jetpack-compose vebda import paytida yiqiladi va preview bo'sh chiqadi. Universal '@expo/ui' dan import qiling.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@expo/ui/swift-ui/*", "@expo/ui/jetpack-compose/*"],
+              message:
+                "Platformaga xos @expo/ui yo'llari vebda yiqiladi. Universal '@expo/ui' dan import qiling.",
+            },
+          ],
+        },
+      ],
+
       // AI ko'pincha FlatList o'rniga .map() ishlatadi — ro'yxat unumdorligi tushadi (spek 17.2).
       "no-restricted-syntax": [
         "error",

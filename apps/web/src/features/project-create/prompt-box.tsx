@@ -14,6 +14,10 @@ import { api, ApiRequestError } from "@/shared/api";
  *
  * Nomni ham so'ramaymiz — birinchi jumladan yasaymiz. Har qo'shimcha
  * maydon boshlanishdagi to'siq va mijozning bir qismini yo'qotadi.
+ *
+ * Ko'rinishi: quyuq karta, ichida undan ham quyuqroq maydon. Fokusda
+ * chegara aksentga aylanadi — bu sahifadagi yagona gradient tugma
+ * bilan bir juftlik hosil qiladi.
  */
 export function PromptBox() {
   const router = useRouter();
@@ -44,8 +48,11 @@ export function PromptBox() {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-line bg-surface p-5">
-      <label htmlFor="prompt" className="block text-lg font-semibold">
+    <form
+      onSubmit={submit}
+      className="rounded-2xl border border-line bg-surface p-2 shadow-2xl shadow-black/40"
+    >
+      <label htmlFor="prompt" className="sr-only">
         Qanday ilova kerak?
       </label>
 
@@ -55,19 +62,23 @@ export function PromptBox() {
         onChange={(e) => setPrompt(e.target.value)}
         rows={3}
         placeholder="Sartaroshxonam bor, mijozlar telefondan navbat olsin va eslatma kelsin…"
-        className="mt-3 w-full resize-none rounded-lg border border-line bg-surface-alt px-3.5 py-3 text-[15px] outline-none focus:border-ink"
+        className="w-full resize-none rounded-xl bg-surface-alt px-4 py-3.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none"
       />
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-2 pt-3 pb-1">
         <span className="text-sm text-ink-faint">
-          O&apos;z tilingizda yozing · Birinchi natija ~90 soniya · Bepul
+          Birinchi natija ~90 soniya · Bepul
         </span>
         <Button type="submit" disabled={busy || prompt.trim().length < 10}>
           {busy ? "Tayyorlanmoqda…" : "Ekranlarni ko'rsat"}
         </Button>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-accent">{error}</p> : null}
+      {error ? (
+        <p className="mx-2 mt-2 rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

@@ -6,16 +6,16 @@
  */
 export function Money({ uzs, usdCents }: { uzs: number; usdCents: number }) {
   return (
-    <span className="inline-flex items-baseline gap-1.5">
-      <span className="font-semibold">{formatUzs(uzs)}</span>
-      <span className="text-ink-faint text-sm">({formatUsd(usdCents)})</span>
+    <span className="inline-flex items-baseline gap-2">
+      <span className="text-2xl font-semibold tracking-tight">{formatUzs(uzs)}</span>
+      <span className="text-sm text-ink-faint">({formatUsd(usdCents)})</span>
     </span>
   );
 }
 
 export function formatUzs(amount: number): string {
   if (amount === 0) return "0 so'm";
-  return `${amount.toLocaleString("uz-UZ").replace(/ /g, " ")} so'm`;
+  return `${amount.toLocaleString("uz-UZ").replace(/ /g, " ")} so'm`;
 }
 
 export function formatUsd(cents: number): string {

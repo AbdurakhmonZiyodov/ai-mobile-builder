@@ -1,4 +1,6 @@
-export type VerifyStep = "typecheck" | "lint" | "bundle";
+import type { VerifyStep } from "@amb/contracts";
+
+export type { VerifyStep };
 
 export interface StepResult {
   step: VerifyStep;
@@ -43,14 +45,7 @@ export interface VerifyOptions {
   onStepEnd?: (result: StepResult) => void;
 }
 
-/** Mijozga ko'rsatiladigan sodda til — «typecheck» so'zi ishlatilmaydi. */
-export function verifyLabelUz(step: VerifyStep): string {
-  switch (step) {
-    case "typecheck":
-      return "Kodni tekshiryapman";
-    case "lint":
-      return "Qoidalarga moslikni tekshiryapman";
-    case "bundle":
-      return "Ilovani yig'yapman";
-  }
-}
+/**
+ * Qadam nomlarining o'zbekcha yorliqlari `@amb/contracts` da
+ * (`verifyLabelUz`) — frontend ham aynan o'shani ishlatadi.
+ */

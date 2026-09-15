@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { taskKindSchema } from "@amb/core-rules";
 
+/** Verify gate qadamlari — hodisalarda ham, yorliqlarda ham ishlatiladi. */
+export const verifySteps = ["typecheck", "lint", "bundle"] as const;
+export type VerifyStep = (typeof verifySteps)[number];
+export const verifyStepSchema = z.enum(verifySteps);
+
 /**
  * Agent tsikli SSE orqali bitta oqimda uzatiladi.
  * Web faqat shu hodisalarni biladi — boshqa yo'l yo'q.
@@ -52,11 +57,11 @@ export const agentEventSchema = z.discriminatedUnion("type", [
 
   z.object({
     type: z.literal("verify.started"),
-    step: z.enum(["typecheck", "lint", "bundle"]),
+    step: verifyStepSchema,
   }),
   z.object({
     type: z.literal("verify.finished"),
-    step: z.enum(["typecheck", "lint", "bundle"]),
+    step: verifyStepSchema,
     ok: z.boolean(),
     /** Qadam bajarilmadi (kichik tahrirda bundle, yoki vosita topilmadi).
      *  "O'tdi" deb ko'rsatish yolg'on bo'lardi — mahsulotning butun va'dasi ishonchda. */

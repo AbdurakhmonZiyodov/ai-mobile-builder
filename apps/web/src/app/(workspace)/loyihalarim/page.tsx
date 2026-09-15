@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ProjectSummary } from "@amb/contracts";
-import { API_URL } from "@/shared/api";
+import { api, API_URL } from "@/shared/api";
 import { PromptBox } from "@/features/project-create/prompt-box";
-import { Badge, Card, SectionLabel } from "@/shared/ui";
+import { Badge, Card, SectionLabel, SiteHeader } from "@/shared/ui";
 
 export const metadata = { title: "Loyihalarim — RIVO" };
 
@@ -17,33 +17,35 @@ export default async function ProjectsPage() {
   const projects = await loadProjects();
 
   return (
-    <main className="mx-auto max-w-4xl space-y-10 px-6 py-12">
-      <header className="flex items-center justify-between border-b-2 border-ink pb-5">
-        <Link href="/" className="text-xl font-semibold tracking-tight">
-          RIVO
-        </Link>
-        <Link href="/narx" className="text-sm text-ink-muted hover:text-ink">
-          Narx
-        </Link>
-      </header>
+    <main className="mx-auto max-w-4xl space-y-12 px-6 pb-24">
+      <SiteHeader
+        links={[
+          { href: "/narx", label: "Narx" },
+          { href: "/loyihalarim", label: "Loyihalarim" },
+        ]}
+      />
 
-      <PromptBox />
+      <section className="space-y-6 pt-6">
+        <h1 className="text-3xl font-semibold tracking-[-0.03em]">Yangi ilova</h1>
+        <PromptBox />
+      </section>
 
       {projects === null ? (
         <Card className="p-5 text-sm text-ink-muted">
-          Serverga ulanib bo&apos;lmadi. Backend ishlab turibdimi
-          (<code className="font-mono text-xs">{API_URL}</code>)?
+          Serverga ulanib bo&apos;lmadi. Backend ishlab turibdimi (
+          <code className="font-mono text-xs text-ink-faint">{API_URL}</code>)?
         </Card>
       ) : projects.length === 0 ? null : (
-        <section className="space-y-4">
+        <section className="space-y-5">
           <SectionLabel left="Loyihalarim" right={`${projects.length} ta`} />
+
           <div className="space-y-2.5">
             {projects.map((project) => (
               <Link key={project.id} href={`/loyiha/${project.id}`} className="block">
-                <Card className="flex items-center gap-4 p-4 transition-colors hover:bg-surface-alt">
-                  <div className="flex-1">
-                    <p className="font-medium">{project.name}</p>
-                    <p className="text-sm text-ink-faint">
+                <Card className="flex flex-wrap items-center gap-4 p-5 transition-colors hover:bg-surface-alt hover:border-line-strong">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{project.name}</p>
+                    <p className="mt-1 text-sm text-ink-faint">
                       SDK {project.sdk}
                       {project.domainPack ? ` · ${project.domainPack}` : ""}
                     </p>
@@ -51,7 +53,7 @@ export default async function ProjectsPage() {
 
                   <Badge tone={statusTone(project.status)}>{statusLabelUz(project.status)}</Badge>
 
-                  <span className="label-mono !text-[11px] whitespace-nowrap">
+                  <span className="label-mono whitespace-nowrap">
                     qoldiq {Math.max(0, project.balance.included - project.balance.used)} /{" "}
                     {project.balance.included}
                   </span>
@@ -72,10 +74,8 @@ export default async function ProjectsPage() {
  */
 async function loadProjects(): Promise<ProjectSummary[] | null> {
   try {
-    const res = await fetch(`${API_URL}/projects`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { projects: ProjectSummary[] };
-    return data.projects;
+    const { projects } = await api.projects.list();
+    return projects;
   } catch {
     return null;
   }
@@ -91,8 +91,10 @@ function statusLabelUz(status: string): string {
   return labels[status] ?? status;
 }
 
-function statusTone(status: string): "neutral" | "success" | "warning" {
+/** Holat rangi. Matn har doim yonida turadi — faqat rangga tayanilmaydi. */
+function statusTone(status: string): "neutral" | "success" | "warning" | "danger" {
   if (status === "ready") return "success";
-  if (status === "failed") return "warning";
+  if (status === "failed") return "danger";
+  if (status === "building") return "warning";
   return "neutral";
 }

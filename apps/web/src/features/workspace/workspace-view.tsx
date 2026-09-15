@@ -17,9 +17,13 @@ interface WorkspaceViewProps {
 /**
  * Workspace — mahsulotning asosiy ekrani.
  *
- * Tartib dizayn kanvasidan: ilova markazda, suhbat ustidan qoplama,
- * qoldiq yuqorida. Mijoz ilovasini ko'rib turadi va uni gapirib
- * o'zgartiradi.
+ * Tartib: chapda suhbat, markazda ilova, o'ngda holat. Uch ustun
+ * qat'iy kenglikda emas — chap va o'ng panel o'z o'lchamini oladi,
+ * markaz esa qolganini. Shunda telefon har doim aniq o'rtada turadi
+ * va ekran kengaygan sari faqat u kattalashadi.
+ *
+ * 1024px dan tor ekranda ustunlar bir-birining ostiga tushadi:
+ * telefon tepada, suhbat pastda — mijoz avval natijani ko'radi.
  */
 export function WorkspaceView({ project, previewReasonUz }: WorkspaceViewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(project.previewUrl);
@@ -61,29 +65,16 @@ export function WorkspaceView({ project, previewReasonUz }: WorkspaceViewProps) 
         onPublish={() => undefined}
       />
 
-      <div className="flex flex-1 gap-6 p-6">
-        {/* Chap: suhbat qoplamasi */}
-        <div className="shrink-0">
-          <ChatOverlay entries={run.entries} busy={run.busy} onSend={run.send} />
-        </div>
-
-        {/* Markaz: ilova */}
-        <div className="flex flex-1 justify-center">
-          <PhoneFrame
-            statusUz={
-              previewBusy
-                ? "Ilova yig'ilmoqda…"
-                : previewUrl
-                  ? "Brauzerda ishlayapti"
-                  : "Preview hali yig'ilmagan"
-            }
-          >
+      <div className="mx-auto grid w-full max-w-[1400px] flex-1 justify-center gap-6 p-6 lg:grid-cols-[minmax(300px,380px)_auto_minmax(280px,320px)]">
+        {/* Markaz: ilova. Tor ekranda birinchi bo'lib ko'rinadi. */}
+        <div className="flex justify-center lg:order-2">
+          <PhoneFrame statusUz={previewStatusUz(previewBusy, previewUrl)}>
             {previewUrl ? (
               <iframe
                 key={previewUrl}
                 src={`${API_URL}${previewUrl}`}
                 title={`${project.name} preview`}
-                className="h-full w-full border-0"
+                className="h-full w-full border-0 bg-white"
               />
             ) : (
               <PhonePlaceholder
@@ -96,21 +87,31 @@ export function WorkspaceView({ project, previewReasonUz }: WorkspaceViewProps) 
           </PhoneFrame>
         </div>
 
+        {/* Chap: suhbat */}
+        <div className="min-w-0 lg:order-1">
+          <ChatOverlay entries={run.entries} busy={run.busy} onSend={run.send} />
+        </div>
+
         {/* O'ng: holat */}
-        <aside className="w-[300px] shrink-0 space-y-4">
+        <aside className="min-w-0 space-y-4 lg:order-3">
           <BalanceMeter balance={run.balance} />
 
-          <Card className="p-3.5 text-sm">
+          <Card className="p-4 text-sm">
             <p className="font-medium">Telefonda ochish</p>
-            <p className="mt-1.5 text-ink-muted">{previewReasonUz}</p>
+            <p className="mt-2 leading-relaxed text-ink-muted">{previewReasonUz}</p>
           </Card>
 
           {project.blocks.length > 0 ? (
-            <Card className="p-3.5 text-sm">
+            <Card className="p-4 text-sm">
               <p className="font-medium">Bloklar</p>
-              <ul className="mt-2 space-y-1 text-ink-muted">
+              <ul className="mt-2.5 space-y-1.5 text-ink-muted">
                 {project.blocks.map((block) => (
-                  <li key={block}>· {block}</li>
+                  <li key={block} className="flex gap-2">
+                    <span aria-hidden className="text-accent">
+                      ·
+                    </span>
+                    {block}
+                  </li>
                 ))}
               </ul>
             </Card>
@@ -119,4 +120,10 @@ export function WorkspaceView({ project, previewReasonUz }: WorkspaceViewProps) 
       </div>
     </div>
   );
+}
+
+/** Holat matni — rang emas, SO'Z bilan. Mijoz nima bo'layotganini o'qiydi. */
+function previewStatusUz(busy: boolean, url: string | null): string {
+  if (busy) return "Ilova yig'ilmoqda…";
+  return url ? "Brauzerda ishlayapti" : "Preview hali yig'ilmagan";
 }

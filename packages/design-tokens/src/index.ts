@@ -6,6 +6,7 @@
  * bir-biridan uzoqlashadi.
  */
 export * from "./colors.js";
+export * from "./gradients.js";
 export * from "./typography.js";
 export * from "./layout.js";
 export { toCssVariables } from "./css.js";

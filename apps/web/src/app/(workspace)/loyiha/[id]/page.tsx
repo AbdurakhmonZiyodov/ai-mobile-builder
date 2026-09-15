@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ProjectSummary } from "@amb/contracts";
-import { API_URL } from "@/shared/api";
+import { api } from "@/shared/api";
 import { WorkspaceView } from "@/features/workspace/workspace-view";
 
 /**
@@ -20,9 +20,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
 async function loadProject(id: string): Promise<ProjectSummary | null> {
   try {
-    const res = await fetch(`${API_URL}/projects/${id}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as ProjectSummary;
+    return await api.projects.get(id);
   } catch {
     return null;
   }
@@ -36,10 +34,8 @@ async function loadProject(id: string): Promise<ProjectSummary | null> {
  */
 async function loadPreviewReason(id: string): Promise<string> {
   try {
-    const res = await fetch(`${API_URL}/preview/${id}`, { cache: "no-store" });
-    if (!res.ok) return "Preview holati aniqlanmadi.";
-    const data = (await res.json()) as { reasonUz: string };
-    return data.reasonUz;
+    const decision = await api.preview.decide({ projectId: id });
+    return decision.reasonUz;
   } catch {
     return "Preview holati aniqlanmadi.";
   }

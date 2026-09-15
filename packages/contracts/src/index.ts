@@ -9,3 +9,4 @@
  */
 export * from "./http.js";
 export * from "./events.js";
+export * from "./labels.js";

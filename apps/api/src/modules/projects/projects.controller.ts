@@ -1,6 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Controller, Get, Param, Post } from "@nestjs/common";
 import { createProjectInput } from "@amb/contracts";
 import { ZodBody } from "../../common/decorators/zod-body.decorator.js";
+import { ZodQuery } from "../../common/decorators/zod-query.decorator.js";
+import {
+  readProjectFileQuery,
+  revertProjectBody,
+  type ReadProjectFileQuery,
+  type RevertProjectBody,
+} from "./dto/read-file.dto.js";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { WorkspaceService } from "../../infrastructure/workspace/workspace.service.js";
 import { ProjectsRepository } from "./projects.repository.js";
@@ -58,11 +65,17 @@ export class ProjectsController {
     return { files: await this.workspaces.get(id).tree() };
   }
 
-  /** GET /projects/:id/file?path=… — bitta faylning kodi. */
+  /**
+   * GET /projects/:id/file?path=… — bitta faylning kodi.
+   *
+   * `path` zod bilan tekshiriladi: berilmasa yoki `..` bo'lsa 400 qaytadi.
+   * Avval u tekshirilmay pastga tushardi va 500 berardi — mijoz uchun
+   * «server buzildi», aslida so'rov noto'g'ri edi.
+   */
   @Get(":id/file")
-  async file(@Param("id") id: string, @Query("path") path: string) {
+  async file(@Param("id") id: string, @ZodQuery(readProjectFileQuery) query: ReadProjectFileQuery) {
     await this.projects.findOrFail(id);
-    return { path, content: await this.workspaces.get(id).read(path) };
+    return { path: query.path, content: await this.workspaces.get(id).read(query.path) };
   }
 
   /** GET /projects/:id/messages — suhbat tarixi (sahifa qayta ochilganda). */
@@ -88,8 +101,8 @@ export class ProjectsController {
    * Nega POST: bu holatni o'zgartiradigan amal. Undo tugmasi shunga ulanadi.
    */
   @Post(":id/revert")
-  async revert(@Param("id") id: string, @Body("versionId") versionId: string) {
-    const version = await this.projects.revert(id, versionId);
+  async revert(@Param("id") id: string, @ZodBody(revertProjectBody) body: RevertProjectBody) {
+    const version = await this.projects.revert(id, body.versionId);
     return { ok: true, revertedToUz: version.label };
   }
 

@@ -8,6 +8,8 @@ Bu yuqori darajadagi xarita. Tafsilot har loyihaning **o'z** hujjatida:
 | Frontend | [`apps/web/docs/ARCHITECTURE.md`](../apps/web/docs/ARCHITECTURE.md) |
 | Mobil shablon | [`templates/mobile/docs/STRUCTURE.md`](../templates/mobile/docs/STRUCTURE.md) |
 
+Bu yerdagi tanlovlarning sabablari — [`docs/decisions/`](./decisions/README.md).
+
 ---
 
 ## Qismlar

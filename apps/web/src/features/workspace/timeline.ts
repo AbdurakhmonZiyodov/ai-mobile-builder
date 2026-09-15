@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@amb/contracts";
+import { toolLabelUz, verifyLabelUz, type AgentEvent } from "@amb/contracts";
 
 export type TimelineKind = "user" | "agent" | "step" | "file" | "verify" | "charge" | "error";
 
@@ -87,25 +87,3 @@ function verifyResultUz(
   return `${label}: o'tmadi\n${errors.slice(0, 3).join("\n")}`;
 }
 
-/** Tool nomlari mijoz tiliga. */
-function toolLabelUz(tool: string): string {
-  const labels: Record<string, string> = {
-    list_files: "Loyihani ko'ryapman",
-    read_file: "Kodni o'qiyapman",
-    search_files: "Kerakli joyni qidiryapman",
-    edit_file: "Tahrirlayapman",
-    create_file: "Yangi ekran yaratyapman",
-    delete_file: "Keraksiz faylni olib tashlayapman",
-    update_design_note: "Dizayn qaydini yangilayapman",
-  };
-  return labels[tool] ?? tool;
-}
-
-function verifyLabelUz(step: "typecheck" | "lint" | "bundle"): string {
-  const labels: Record<string, string> = {
-    typecheck: "Kodni tekshiryapman",
-    lint: "Qoidalarga moslikni tekshiryapman",
-    bundle: "Ilovani yig'yapman",
-  };
-  return labels[step] ?? step;
-}

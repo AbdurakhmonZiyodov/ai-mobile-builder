@@ -33,6 +33,9 @@ export function builderSystem(input: BuilderPromptInput): string {
 6. Bloklar tayyor: ularning fayllarini parametrlashtir, noldan yozma.
 7. Papka strukturasi qotirilgan: \`app/\`, \`src/components/\`, \`src/features/\`, \`src/lib/\`, \`src/types/\`.
 8. UI uchun \`@expo/ui\` primitivlari ustun (iOS'da SwiftUI, Android'da Compose).
+   FAQAT universal yo'ldan import qil: \`import { Button } from "@expo/ui"\`.
+   \`@expo/ui/swift-ui\` va \`@expo/ui/jetpack-compose\` TAQIQLANGAN — ular
+   vebda import paytida yiqiladi va mijozning preview'i bo'sh ekran bo'ladi.
 9. Hech qachon "tuzatdim" deb yozma, agar hech narsa o'zgarmagan bo'lsa.
 10. Expo SDK ${input.sdk} — boshqa SDK API'sini ishlatma.
 

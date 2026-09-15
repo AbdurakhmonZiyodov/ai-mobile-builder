@@ -1,52 +1,61 @@
-import Link from "next/link";
 import { PromptBox } from "@/features/project-create/prompt-box";
-import { SectionLabel } from "@/shared/ui";
+import { AmbientGlow, Card, GradientText, SectionLabel, SiteHeader } from "@/shared/ui";
 
 /**
  * Landing.
  *
- * Prompt maydoni ekranning yuqorisida va bu ataylab: mijoz mahsulotni
- * o'qimasdan ham boshlay olishi kerak. Pozitsiyalash matni pastda —
- * u ishonchni mustahkamlaydi, lekin boshlashga to'sqinlik qilmaydi.
+ * Tartib: katta markazlashgan sarlavha, ostida darhol prompt maydoni.
+ * Mijoz mahsulotni o'qimasdan ham boshlay olishi kerak — pozitsiyalash
+ * matni pastda, u ishonchni mustahkamlaydi, lekin boshlashga
+ * to'sqinlik qilmaydi.
+ *
+ * Gradient bu sahifada uch joyda: sarlavhaning bitta jumlasi, prompt
+ * tugmasi va fon porlashi. Undan ko'pi shovqin bo'lardi.
  */
 export default function LandingPage() {
   return (
-    <main className="mx-auto max-w-5xl space-y-14 px-6 py-12">
-      <header className="flex items-center justify-between border-b-2 border-ink pb-5">
-        <span className="text-xl font-semibold tracking-tight">RIVO</span>
-        <nav className="flex items-center gap-5 text-sm">
-          <Link href="/narx" className="text-ink-muted hover:text-ink">
-            Narx
-          </Link>
-          <Link href="/loyihalarim" className="text-ink-muted hover:text-ink">
-            Loyihalarim
-          </Link>
-        </nav>
-      </header>
+    <main className="relative mx-auto max-w-5xl px-6 pb-24">
+      <SiteHeader
+        links={[
+          { href: "/narx", label: "Narx" },
+          { href: "/loyihalarim", label: "Loyihalarim" },
+        ]}
+      />
 
-      <section className="space-y-6">
-        <h1 className="max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
-          Boshqalar tez chiqarish uchun.{" "}
-          <span className="text-accent">Biz ishlab turishi uchun.</span>
+      <section className="relative flex flex-col items-center pt-14 pb-24 text-center sm:pt-20">
+        <AmbientGlow className="top-0 left-1/2 h-[420px] w-[720px] -translate-x-1/2 opacity-15" />
+
+        <span className="label-mono rounded-full border border-line bg-surface px-4 py-1.5">
+          O&apos;zbek tilida · Kafolat bilan
+        </span>
+
+        <h1 className="mt-8 max-w-4xl text-[2.75rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance sm:text-6xl">
+          Boshqalar tez chiqarish uchun.
+          <br />
+          <GradientText>Biz ishlab turishi uchun.</GradientText>
         </h1>
 
-        <p className="max-w-2xl text-[17px] leading-relaxed text-ink-muted">
-          G&apos;oyangizni o&apos;z tilingizda ayting. Biz ilovani quramiz,
-          o&apos;zimiz ochib har tugmasini bosib tekshiramiz, do&apos;konga chiqaramiz va keyin ham
+        <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-muted text-pretty">
+          G&apos;oyangizni o&apos;z tilingizda ayting. Biz ilovani quramiz, o&apos;zimiz
+          ochib har tugmasini bosib tekshiramiz, do&apos;konga chiqaramiz va keyin ham
           ishlab turishini ta&apos;minlaymiz.
         </p>
 
-        <PromptBox />
+        <div className="mt-12 w-full max-w-2xl text-left">
+          <PromptBox />
+        </div>
       </section>
 
-      <section className="space-y-5">
+      <section className="space-y-6">
         <SectionLabel left="Uchta ustun" right="nega biz" />
+
         <div className="grid gap-4 sm:grid-cols-3">
-          {PILLARS.map((pillar) => (
-            <div key={pillar.title} className="border-t-2 border-ink pt-4">
-              <h2 className="font-semibold">{pillar.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{pillar.body}</p>
-            </div>
+          {PILLARS.map((pillar, index) => (
+            <Card key={pillar.title} className="p-6">
+              <span className="label-mono">{String(index + 1).padStart(2, "0")}</span>
+              <h2 className="mt-4 font-semibold">{pillar.title}</h2>
+              <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{pillar.body}</p>
+            </Card>
           ))}
         </div>
       </section>

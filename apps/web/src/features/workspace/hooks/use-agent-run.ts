@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { AgentEvent } from "@amb/contracts";
 import type { Balance } from "@amb/core-rules";
-import { streamAgent } from "@/shared/api";
+import { api } from "@/shared/api";
 import { toTimelineEntry, type TimelineEntry } from "../timeline";
 
 interface UseAgentRunOptions {
@@ -54,7 +54,7 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
       push({ id: crypto.randomUUID(), kind: "user", text });
 
       try {
-        await streamAgent({ projectId, text, designMode }, (event: AgentEvent) => {
+        await api.agent.stream({ projectId, text, designMode }, (event: AgentEvent) => {
           if (event.type === "text") {
             appendText(event.delta);
             return;

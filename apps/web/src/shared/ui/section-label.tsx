@@ -1,12 +1,18 @@
 /**
- * Bo'lim yorlig'i: «01 — LANDING», chiziq bilan.
- * Dizayn kanvasidagi naqsh — u sahifani bo'limlarga ajratadi.
+ * Bo'lim yorlig'i: «LOYIHALARIM — 4 TA», chiziq bilan.
+ *
+ * Chiziq gradientdan boshlanib fonga singib ketadi. Bu gradientning
+ * eng kam «ovozli» ishlatilishi: u bo'limni ajratadi, lekin e'tiborni
+ * asosiy tugmadan tortib olmaydi.
  */
 export function SectionLabel({ left, right }: { left: string; right?: string }) {
   return (
-    <div className="flex items-center gap-3.5 label-mono">
+    <div className="label-mono flex items-center gap-4">
       <span className="text-ink">{left}</span>
-      <span className="h-px flex-1 bg-line" />
+      <span
+        aria-hidden
+        className="h-px flex-1 bg-linear-to-r from-accent-via/40 to-transparent"
+      />
       {right ? <span>{right}</span> : null}
     </div>
   );

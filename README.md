@@ -116,5 +116,5 @@ npm run db:push     npm run db:studio
 | Fayl | Nima uchun |
 | --- | --- |
 | [`docs/STRUKTURA-TAKLIFI.md`](./docs/STRUKTURA-TAKLIFI.md) | Struktura va uning sabablari |
-| [`docs/DECISIONS.md`](./docs/DECISIONS.md) | Qarorlar, spekdan chekinishlar, topilgan xatolar |
+| [`docs/decisions/`](./docs/decisions/README.md) | Qarorlar (ADR): spekdan chekinishlar, topilgan xatolar |
 | [`docs/MVP-v1.2-spek.md`](./docs/MVP-v1.2-spek.md) | Mahsulot spetsifikatsiyasi |

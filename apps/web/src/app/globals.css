@@ -1,37 +1,60 @@
 @import "tailwindcss";
 
 /**
- * RIVO dizayn tokenlari.
+ * RIVO dizayn tokenlari — quyuq fon, iliq gradient aksent.
  *
- * Qiymatlar `@amb/design-tokens` dan ko'chirilgan. Nega ikki joyda:
- * Tailwind v4 `@theme` ni build paytida o'qiydi va JS'dan qiymat
- * ololmaydi. Mobil shablon esa TS obyektini ishlatadi.
- *
- * Bir-biridan uzoqlashmasligi uchun `npm run check:tokens` skripti
- * ikkalasini solishtiradi.
+ * Qiymatlar `@amb/design-tokens` `toCssVariables()` chiqishidan
+ * ko'chirilgan. Nega ikki joyda: Tailwind v4 `@theme` ni build paytida
+ * o'qiydi va JS'dan qiymat ololmaydi. Mobil shablon esa TS obyektini
+ * ishlatadi.
  */
 @theme {
-  --color-paper: #e7e1d5;
-  --color-surface: #f7f4ee;
-  --color-surface-alt: #ede7db;
-  --color-surface-sunken: #dcd5c8;
+  --color-paper: #0b0b0d;
+  --color-surface: #141416;
+  --color-surface-alt: #1b1b1e;
+  --color-surface-high: #24242a;
 
-  --color-ink: #151510;
-  --color-ink-muted: #4a4840;
-  --color-ink-faint: #5f5b52;
+  --color-ink: #f4f3f1;
+  --color-ink-muted: #aba9a5;
+  --color-ink-faint: #918f8a;
 
-  --color-line: #c9c2b3;
-  --color-line-strong: #151510;
+  --color-line: #26262b;
+  --color-line-strong: #3a3a42;
 
-  --color-accent: #b03a18;
-  --color-accent-soft: #f0a483;
+  --color-accent: #ffa93b;
+  --color-accent-ink: #0a0a0b;
+  --color-accent-surface: #2a1c0d;
+  --color-accent-soft: #ffc77a;
 
-  --color-success: #155c3e;
-  --color-success-alt: #1d6b4a;
-  --color-success-surface: #e4f0e8;
+  --color-success: #4ade94;
+  --color-success-surface: #10261d;
 
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  --color-danger: #ff7a6b;
+  --color-danger-surface: #2a1512;
+
+  /* Gradient to'xtash nuqtalari — `from-accent-from` kabi sinflar uchun. */
+  --color-accent-from: #f7e15e;
+  --color-accent-via: #ffa93b;
+  --color-accent-to: #ff6b4a;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+
+/* Gradientning yagona ta'rifi — hamma yordamchi sinf shuni ishlatadi. */
+:root {
+  --gradient-accent: linear-gradient(
+    100deg,
+    var(--color-accent-from) 0%,
+    var(--color-accent-via) 52%,
+    var(--color-accent-to) 100%
+  );
+  /* Telefon maketidan yuqorida va pastda qoldiriladigan joy. */
+  --phone-reserve: 11.5rem;
+  /* Telefon ustidagi holat matni ishg'ol qiladigan qator. */
+  --phone-status-row: 2.5rem;
+  /* Workspace ustunlarining yagona balandligi — suhbat va telefon uchun. */
+  --workspace-panel-h: min(844px, calc(100dvh - var(--phone-reserve)));
 }
 
 html,
@@ -49,6 +72,21 @@ body {
   text-wrap: pretty;
 }
 
+/* Quyuq fonda brauzerning oq scrollbar'i va autofill fonini to'g'rilaydi. */
+* {
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /**
  * Mono yorliq: «01 — LANDING», «v14», «4 / 10».
  * Mono shrift «bu texnik ma'lumot» degan signal beradi va uni oddiy
@@ -56,8 +94,82 @@ body {
  */
 .label-mono {
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-ink-faint);
+}
+
+/**
+ * Gradient matn — sarlavhaning FAQAT bir-ikki so'zi uchun.
+ * Butun jumlaga qo'yilsa o'qish og'irlashadi va aksent yo'qoladi.
+ */
+.gradient-text {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/**
+ * Gradient sirt — asosiy tugma va ingichka ajratuvchi chiziq.
+ * Sahifada faqat BITTA gradient tugma bo'lishi kerak.
+ */
+.gradient-surface {
+  background: var(--gradient-accent);
+  color: var(--color-accent-ink);
+}
+
+/**
+ * O'chirilgan gradient tugma.
+ *
+ * Shaffoflik bilan xiralashtirilgan gradient loyqa jigarrang dog'ga
+ * aylanadi va «buzilgan» ko'rinadi. Shuning uchun u tekis sirtga
+ * o'tadi: holat aniq o'qiladi, matn esa AA kontrastida qoladi.
+ */
+.gradient-surface:disabled {
+  background: var(--color-surface-high);
+  color: var(--color-ink-faint);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/**
+ * Gradient ostidagi porlash. Tugmaning o'zi emas — uning orqasidagi
+ * yumshoq yorug'lik. `::after` ishlatilmaydi, chunki tugma ichida
+ * matn bor va blur uni ham xiralashtirardi.
+ */
+.gradient-glow {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent-via) 35%, transparent),
+    0 10px 36px -10px color-mix(in srgb, var(--color-accent-via) 55%, transparent);
+}
+
+/**
+ * Telefon maketi.
+ *
+ * Nega qat'iy 844px emas: 1440×900 ekranda telefon kesilib qolardi.
+ * Balandlik ekranga moslashadi, nisbat (390:844) esa saqlanadi —
+ * shunda maket haqiqiy qurilmadek ko'rinishda qoladi.
+ */
+.phone-shell {
+  /* Holat matni qatori ayiriladi — shunda telefon va suhbat pastda tekis tugaydi. */
+  height: calc(var(--workspace-panel-h) - var(--phone-status-row));
+  aspect-ratio: 390 / 844;
+  max-width: 100%;
+}
+
+/**
+ * Suhbat paneli telefon bilan bir xil balandlikda tugaydi.
+ * Ikkalasi ham `--phone-reserve` ni o'qiydi — raqam bitta joyda turadi.
+ */
+.panel-tall {
+  height: var(--workspace-panel-h);
+}
+
+@media (max-width: 1024px) {
+  :root {
+    /* Kichik ekranda ustunlar bir-birining ostiga tushadi — ko'proq joy kerak. */
+    --phone-reserve: 19rem;
+  }
 }
