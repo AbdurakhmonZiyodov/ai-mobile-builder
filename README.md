@@ -30,6 +30,7 @@ npm run db:push              # sxemani yuklash
 npm --prefix templates/expo-base install
 
 npm run dev                  # api :4000 · web :3000
+npm run dev:app              # yengilroq: faqat api va web, paketlarni kuzatmasdan
 ```
 
 Model kaliti bo'lmasa tizim **mock provayderda** ishlaydi: tasniflash, tool chaqirish,

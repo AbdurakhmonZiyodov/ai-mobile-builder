@@ -106,12 +106,16 @@ export function ProjectWorkspace({
           push("verify", `${labelForVerify(String(event.step))}…`);
         } else if (type === "verify.finished") {
           const ok = Boolean(event.ok);
+          const skipped = Boolean(event.skipped);
           const errors = Array.isArray(event.errors) ? (event.errors as string[]) : [];
+          const label = labelForVerify(String(event.step));
           push(
             ok ? "verify" : "error",
-            ok
-              ? `${labelForVerify(String(event.step))}: o'tdi`
-              : `${labelForVerify(String(event.step))}: o'tmadi\n${errors.slice(0, 3).join("\n")}`,
+            skipped
+              ? `${label}: bu o'zgarish uchun kerak emas edi — o'tkazib yuborildi`
+              : ok
+                ? `${label}: o'tdi`
+                : `${label}: o'tmadi\n${errors.slice(0, 3).join("\n")}`,
           );
         } else if (type === "repair.attempt") {
           push("system", `Xatoni tuzatyapman (${event.attempt}/${event.max}) — bu bepul`);

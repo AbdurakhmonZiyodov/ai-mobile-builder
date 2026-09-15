@@ -3,6 +3,7 @@ node_modules/
 dist/
 .amb-web/
 .amb-bundle/
+.amb-cache/
 *.log
 .env
 expo-env.d.ts

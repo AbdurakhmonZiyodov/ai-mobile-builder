@@ -13,3 +13,10 @@ workspaces/
 *.log
 coverage/
 .expo/
+
+# Global gitignore'dagi Swift qoidasi (`Packages/`) macOS'ning registrga sezgir
+# bo'lmagan fayl tizimida bizning `packages/` ni ham yutib yuboradi.
+# Repo .gitignore'i global'dan ustun — shuning uchun shu yerda bekor qilamiz.
+# Faqat papkaning o'zini qayta yoqamiz — `dist/` va `node_modules/` qoidalari
+# o'z kuchida qoladi, shuning uchun `!packages/**` yozilmaydi.
+!packages/

@@ -119,6 +119,80 @@ typecheck qiladi. TS 6 chiqqach qayta ko'riladi.
 
 ---
 
+## 10. Metro keshi har loyihada alohida
+
+**Topilgan xato (ishga tushirish paytida):** mijoz o'zgarish kiritadi, preview
+"muvaffaqiyatli" yig'iladi (1.3 s), lekin **ESKI ilovani** ko'rsatadi.
+
+**Sabab:** Metro keshi tizim temp papkasida (`$TMPDIR/metro-cache`) — barcha
+loyihalarga umumiy. Bu 6-qarordagi symlink yechimining yon ta'siri.
+
+**Nega jiddiy:** bu mahsulotning eng yomon nosozlik turi — "AI tuzatdim dedi,
+hech narsa o'zgarmadi". Spek aynan shuni taqiqlaydi (8.3). Bundan tashqari bir
+mijozning bundle'i boshqasiga tushishi mumkin edi.
+
+**Qaror:** `metro.config.js` keshni `.amb-cache` ga, ya'ni loyihaning o'ziga
+qo'yadi. `__dirname` har workspace uchun boshqa — kesh ham ajralgan.
+Tekshirildi: o'zgarish `--clear` siz ham 1.7 s da chiqadi.
+
+**Qayerda:** `templates/expo-base/metro.config.js`
+
+---
+
+## 11. Shablon bosh ekranida asosiy rang ko'rinib turishi shart
+
+**Muammo:** mijoz "rangni qizil qil" dedi, agent `theme.ts` ni to'g'ri
+o'zgartirdi, verify gate o'tdi, 1 o'zgarish hisoblandi — lekin ekranda
+**farq yo'q** edi, chunki bosh ekranda asosiy rangdagi element yo'q edi.
+Mijoz uchun bu "pul oldi, hech narsa qilmadi" degani.
+
+**Qaror:** bosh ekranda asosiy rangdagi tugma va ro'yxatdagi rangli havola.
+Tugma **haqiqiy ish qiladi** — bo'sh `onPress` Apple 2.1 bandi bo'yicha rad
+etish sababi va Review Checker uni topadi.
+
+**Qayerda:** `templates/expo-base/app/(app)/index.tsx`
+
+---
+
+## 12. Turbo concurrency 16
+
+Har paketning `dev` i `tsc --watch` — hammasi doimiy vazifa. 11 ta doimiy vazifa
+turbo'ning standart 10 chegarasidan oshadi va `npm run dev` ishga tushmaydi.
+`turbo.json` da `concurrency: 16`. Yengilroq variant: `npm run dev:app`
+(faqat api va web).
+
+---
+
+## 13. Verify gate'da o'tkazib yuborilgan qadam "o'tdi" deb ko'rsatilmaydi
+
+Kichik tahrirda bundle qadami bajarilmaydi (tezlik uchun). UI uni "o'tdi" deb
+ko'rsatardi — bu yolg'on, mahsulotning butun va'dasi esa ishonchda.
+Endi `verify.finished` hodisasida `skipped` maydoni bor va UI
+"bu o'zgarish uchun kerak emas edi — o'tkazib yuborildi" deb yozadi.
+
+---
+
+## 14. `!packages/` — global gitignore tuzog'i
+
+**Topilgan xato:** birinchi push'dan keyin GitHub'da **butun `packages/` papkasi
+yo'q** edi — 41 ta manba fayl, mahsulotning yadrosi. Git hech qanday ogohlantirish
+bermadi.
+
+**Sabab:** `~/.gitignore_global` da Swift Package Manager uchun `Packages/` qoidasi
+bor. macOS fayl tizimi registrga sezgir emas, shuning uchun git buni bizning
+`packages/` ga ham qo'lladi.
+
+**Qaror:** repo `.gitignore` ida `!packages/`. Repo qoidalari global'dan ustun.
+Faqat **papkaning o'zi** qayta yoqiladi — `!packages/**` yozilmaydi, aks holda
+`dist/` va `node_modules/` qoidalari ham bekor bo'ladi (sinab ko'rildi: 160 ta
+ortiqcha fayl commitga tushdi).
+
+**Diqqat:** bu tuzoq shu mashinadagi **har qanday Node monorepo**'ga tegadi.
+Yangi loyihada birinchi commitdan keyin `git ls-files | grep packages/` bilan
+tekshirish kerak.
+
+---
+
 ## Hali qurilmagan (spek bo'yicha keyingi navbat)
 
 | Nima | Spek | Hafta |
