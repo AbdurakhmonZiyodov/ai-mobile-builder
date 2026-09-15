@@ -46,13 +46,45 @@ export class PreviewStaticController {
    * tekshiriladi — aks holda `../../` bilan istalgan faylni o'qish mumkin
    * bo'lardi.
    */
+  /**
+   * Papka manzili (`…/static/`) — ilovaning ildiz marshruti.
+   *
+   * Nega alohida: manzil `index.html` bilan tugasa, Expo Router uni
+   * marshrut deb oladi va «Bunday sahifa yo'q» chiqaradi. Ildiz `/`
+   * bo'lishi kerak.
+   */
+  @Get(":id/static")
+  async serveRoot(@Param("id") id: string, @Res() res: Response): Promise<void> {
+    return this.sendFile(id, "index.html", res);
+  }
+
   @Get(":id/static/*path")
   async serve(@Param("id") id: string, @Req() req: Request, @Res() res: Response): Promise<void> {
+    /**
+     * Yo'lning `/static/` dan KEYINGI QISMI.
+     *
+     * `split("/static/")[1]` ISHLATIB BO'LMAYDI: Expo chiqishida fayllar
+     * `_expo/static/js/web/…` ichida yotadi, ya'ni yo'lda `/static/`
+     * ikki marta uchraydi. U holda faqat `_expo` olinardi va butun JS
+     * bundle 404 berardi — sahifa server tomonda chizilgan holida
+     * qotib qolardi, konsolda esa hech qanday xato ko'rinmasdi.
+     *
+     * Shuning uchun faqat BIRINCHI ajratuvchidan keyingi hamma narsani
+     * olamiz.
+     */
+    const marker = "/static/";
+    const at = req.path.indexOf(marker);
+    const relative = at === -1 ? "" : req.path.slice(at + marker.length);
+
+    return this.sendFile(id, relative, res);
+  }
+
+  /** Fayl yuborish — yo'l chegarasi shu yerda tekshiriladi. */
+  private async sendFile(id: string, relative: string, res: Response): Promise<void> {
     if (!/^[a-zA-Z0-9_-]{3,64}$/.test(id)) {
       throw new BadRequestException({ messageUz: "Loyiha manzili noto'g'ri." });
     }
 
-    const relative = req.path.split("/static/")[1] ?? "";
     const base = path.join(this.config.workspaceRoot, id, ".amb-web");
     const target = path.resolve(base, relative || "index.html");
 

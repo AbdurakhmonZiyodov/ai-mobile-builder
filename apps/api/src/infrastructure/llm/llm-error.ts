@@ -46,18 +46,26 @@ export function classifyLlmError(err: unknown): LlmError {
     );
   }
 
-  if (/402|insufficient|credit|budget|quota exceeded/i.test(raw)) {
-    return new LlmError(
-      "quota",
-      "Model xizmatida mablag' tugadi — bu bizning tomondagi muammo. O'zgarish hisoblanmadi, tez orada tuzatamiz.",
-      err,
-    );
-  }
-
+  /**
+   * TEKSHIRUV TARTIBI MUHIM: chegara (rate limit) quota'dan OLDIN.
+   *
+   * Ba'zi provayderlar chegara xabarida ham «credits» so'zini ishlatadi
+   * (masalan Vercel: «Free tier requests are rate-limited. Upgrade to
+   * paid credits»). Quota avval tekshirilsa, mijozga «mablag' tugadi»
+   * deb aytiladi — bu yolg'on va u keraksiz to'lov qilishga urinadi.
+   */
   if (/429|rate.?limit|overloaded|capacity/i.test(raw)) {
     return new LlmError(
       "rate_limit",
       "Hozir juda ko'p so'rov bor. Bir daqiqadan keyin qayta urinib ko'ring — bu o'zgarish hisoblanmadi.",
+      err,
+    );
+  }
+
+  if (/402|insufficient|credit|budget|quota exceeded/i.test(raw)) {
+    return new LlmError(
+      "quota",
+      "Model xizmatida mablag' tugadi — bu bizning tomondagi muammo. O'zgarish hisoblanmadi, tez orada tuzatamiz.",
       err,
     );
   }

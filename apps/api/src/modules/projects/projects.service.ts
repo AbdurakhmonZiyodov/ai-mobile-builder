@@ -13,6 +13,7 @@ import { WorkspaceService } from "../../infrastructure/workspace/workspace.servi
 import type { Project, Version } from "../../infrastructure/database/schema/index.js";
 import { ProjectsRepository } from "./projects.repository.js";
 import { seedProjectDocs } from "./project-docs.builder.js";
+import { buildProjectName } from "./project-name.builder.js";
 import type { CreateProjectDto } from "./dto/create-project.dto.js";
 import { toProjectSummary, type ProjectSummaryDto } from "./dto/project-summary.dto.js";
 
@@ -55,6 +56,9 @@ export class ProjectsService {
       throw new UnprocessableEntityException({ messageUz: payment.messageUz, clause: "3.1.1" });
     }
 
+    // Mijoz nom bermagan bo'lsa, aniqlangan sohadan yasaymiz.
+    const name = dto.name ?? buildProjectName(pack);
+
     const projectId = ID.project();
     const sdk = dto.sdk ?? DEFAULT_SDK;
     const plan = PLANS.trial;
@@ -69,7 +73,7 @@ export class ProjectsService {
     await this.repository.create({
       id: projectId,
       userId,
-      name: dto.name,
+      name,
       status: "draft",
       sdk,
       domainPack: packId ?? null,
@@ -84,7 +88,7 @@ export class ProjectsService {
 
     // Workspace shablondan yaratiladi va hujjatlar bilan birinchi commit qilinadi.
     const ws = await this.workspaces.ensure(projectId);
-    await seedProjectDocs(ws, { name: dto.name, prompt: dto.prompt, pack, blocks });
+    await seedProjectDocs(ws, { name, prompt: dto.prompt, pack, blocks });
     await ws.commit("Loyiha hujjatlari");
 
     this.logger.log(`Loyiha yaratildi: ${projectId} (${packId ?? "domen aniqlanmadi"})`);

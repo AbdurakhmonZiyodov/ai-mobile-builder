@@ -4,7 +4,13 @@ import { previewPathSchema } from "@amb/core-rules";
 /** HTTP shartnomalari — web va api o'rtasidagi yagona haqiqat manbai. */
 
 export const createProjectInput = z.object({
-  name: z.string().min(2).max(60),
+  /**
+   * Ilova nomi — IXTIYORIY.
+   *
+   * Mijozdan so'ralmaydi: u g'oyasini yozadi, nom haqida hali o'ylamagan.
+   * Berilmasa, server uni aniqlangan domen paketidan yasaydi.
+   */
+  name: z.string().min(2).max(60).optional(),
   /** Mijozning birinchi jumlasi: "Sartaroshxona uchun bron ilovasi kerak" */
   prompt: z.string().min(3).max(4000),
   domainPack: z.string().optional(),

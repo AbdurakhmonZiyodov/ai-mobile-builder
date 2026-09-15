@@ -9,6 +9,7 @@ import { requiresDevClient } from "@amb/blocks";
 import { WorkspaceService } from "../../infrastructure/workspace/workspace.service.js";
 import { ProjectsRepository } from "../projects/projects.repository.js";
 import { ProjectsService } from "../projects/projects.service.js";
+import { withPreviewBaseUrl } from "./base-url.helper.js";
 
 export interface WebPreviewResult {
   ok: boolean;
@@ -81,10 +82,13 @@ export class PreviewService {
       };
     }
 
-    const result = await ws.exec(
-      expo,
-      ["export", "--platform", "web", "--output-dir", WEB_OUTPUT_DIR],
-      { timeoutMs: 300_000 },
+    // Preview `/preview/<id>/static/` ostida beriladi, Expo esa yo'llarni
+    // ildizga nisbatan yozadi — shuning uchun eksport paytida baseUrl
+    // qo'yiladi va keyin qaytariladi.
+    const result = await withPreviewBaseUrl(ws, `/preview/${project.id}/static`, () =>
+      ws.exec(expo, ["export", "--platform", "web", "--output-dir", WEB_OUTPUT_DIR], {
+        timeoutMs: 300_000,
+      }),
     );
 
     const durationMs = Date.now() - started;
@@ -100,7 +104,8 @@ export class PreviewService {
       };
     }
 
-    const url = `/preview/${project.id}/static/index.html`;
+    // `index.html` siz: aks holda Expo Router uni marshrut deb oladi.
+    const url = `/preview/${project.id}/static/`;
     await this.repository.updatePreview(project.id, project.previewPath, url);
 
     return {

@@ -34,8 +34,8 @@ export function PromptBox() {
     setError(null);
 
     try {
+      // Nom yuborilmaydi — server uni aniqlangan sohadan yasaydi.
       const result = await api.projects.create({
-        name: deriveName(text),
         prompt: text,
         blocks: [],
         locale: "uz",
@@ -83,18 +83,3 @@ export function PromptBox() {
   );
 }
 
-/**
- * Birinchi jumladan ilova nomini yasaydi.
- *
- * Nega taxmin: mijozdan nom so'rash uni to'xtatadi — u hali nom
- * o'ylamagan. Nomni keyin bir bosishda o'zgartira oladi.
- */
-function deriveName(prompt: string): string {
-  const firstWords = prompt
-    .split(/[\s,.!?]+/)
-    .filter(Boolean)
-    .slice(0, 3)
-    .join(" ");
-  const name = firstWords.charAt(0).toUpperCase() + firstWords.slice(1);
-  return name.length >= 2 ? name.slice(0, 60) : "Yangi ilova";
-}

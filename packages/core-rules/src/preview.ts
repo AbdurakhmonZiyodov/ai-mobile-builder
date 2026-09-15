@@ -21,6 +21,17 @@ export interface PreviewPathInfo {
   needsAppleAccount: boolean;
   /** Taxminiy tayyorlanish vaqti, soniya */
   etaSeconds: number;
+  /**
+   * Bu yo'l HOZIR ishlaydimi.
+   *
+   * Mahsulot to'rt yo'lga mo'ljallangan, lekin ularning uchtasi hali
+   * qurilmagan. Mijozga «telefoningizda darhol ochiladi» deb aytib,
+   * keyin ocholmaslik — eng yomon turdagi yolg'on: u ishonchni
+   * yo'qotadi va support oqimini keltiradi.
+   *
+   * Yo'l tayyor bo'lgach, shu bayroq `true` ga o'zgaradi.
+   */
+  available: boolean;
 }
 
 export const PREVIEW_PATHS: Record<PreviewPath, PreviewPathInfo> = {
@@ -32,6 +43,7 @@ export const PREVIEW_PATHS: Record<PreviewPath, PreviewPathInfo> = {
     limitUz: "Native modullar ishlamaydi",
     needsAppleAccount: false,
     etaSeconds: 20,
+    available: true,
   },
   expo_go: {
     id: "expo_go",
@@ -41,6 +53,7 @@ export const PREVIEW_PATHS: Record<PreviewPath, PreviewPathInfo> = {
     limitUz: "Faqat Expo SDK modullari; SDK versiyasi Expo Go'nikiga bog'liq",
     needsAppleAccount: false,
     etaSeconds: 30,
+    available: false,
   },
   eas_go: {
     id: "eas_go",
@@ -50,6 +63,7 @@ export const PREVIEW_PATHS: Record<PreviewPath, PreviewPathInfo> = {
     limitUz: "Apple Developer akkaunti kerak",
     needsAppleAccount: true,
     etaSeconds: 900,
+    available: false,
   },
   dev_client: {
     id: "dev_client",
@@ -59,8 +73,14 @@ export const PREVIEW_PATHS: Record<PreviewPath, PreviewPathInfo> = {
     limitUz: "EAS build 5–15 daqiqa",
     needsAppleAccount: true,
     etaSeconds: 900,
+    available: false,
   },
 };
+
+/** Hozir ishlaydigan yo'llar. */
+export function availablePreviewPaths(): PreviewPathInfo[] {
+  return Object.values(PREVIEW_PATHS).filter((p) => p.available);
+}
 
 export interface PreviewDecisionInput {
   /** Tanlangan bloklarning eng yuqori preview talabi */
@@ -85,6 +105,21 @@ export interface PreviewDecision {
  * Har holatda mijozga nima uchun shunday ekani bir jumlada tushuntiriladi.
  */
 export function decidePreviewPath(input: PreviewDecisionInput): PreviewDecision {
+  const ideal = decideIdealPath(input);
+
+  // Mo'ljallangan yo'l hali qurilmagan bo'lsa, mijozga uni va'da qilmaymiz.
+  if (!PREVIEW_PATHS[ideal.path].available) {
+    return {
+      path: "web",
+      reasonUz: `${ideal.reasonUz} Bu yo'l hozircha tayyor emas — ilovangizni brauzerda ko'rsatamiz.`,
+      fallback: "web",
+    };
+  }
+  return ideal;
+}
+
+/** Spekdagi qaror mantig'i — qaysi yo'l TO'G'RI kelishini aytadi. */
+function decideIdealPath(input: PreviewDecisionInput): PreviewDecision {
   if (input.requiresDevClient) {
     return {
       path: input.hasAppleAccount ? "dev_client" : "web",
@@ -107,7 +142,8 @@ export function decidePreviewPath(input: PreviewDecisionInput): PreviewDecision 
 
   return {
     path: "expo_go",
-    reasonUz: "Ilovangiz faqat Expo SDK modullarini ishlatadi — telefoningizda Expo Go orqali darhol ochiladi.",
+    reasonUz:
+      "Ilovangiz faqat Expo SDK modullarini ishlatadi, shuning uchun uni telefonda Expo Go orqali ochish mumkin.",
     fallback: "web",
   };
 }

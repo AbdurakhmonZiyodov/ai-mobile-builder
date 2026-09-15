@@ -54,7 +54,9 @@ export class AgentService {
     // --- 1. Tasniflash ---------------------------------------------------
     const classification = input.designMode
       ? { kind: "design" as TaskKind, summaryUz: summaryFor("design"), clarifyingQuestionUz: null, costCents: 0 }
-      : await this.classifier.classify(input.prompt);
+      // Tarix MAJBURIY: usiz tasniflagich foydalanuvchining javobini
+      // yangi so'rov deb ko'radi va cheksiz savol halqasi hosil bo'ladi.
+      : await this.classifier.classify(input.prompt, input.history);
 
     let costCents = classification.costCents;
     const kind = classification.kind;
