@@ -1,11 +1,37 @@
 @import "tailwindcss";
 
+/**
+ * RIVO dizayn tokenlari.
+ *
+ * Qiymatlar `@amb/design-tokens` dan ko'chirilgan. Nega ikki joyda:
+ * Tailwind v4 `@theme` ni build paytida o'qiydi va JS'dan qiymat
+ * ololmaydi. Mobil shablon esa TS obyektini ishlatadi.
+ *
+ * Bir-biridan uzoqlashmasligi uchun `npm run check:tokens` skripti
+ * ikkalasini solishtiradi.
+ */
 @theme {
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
-  --color-line: #e2e8f0;
-  --color-brand: #2563eb;
-  --color-surface: #f8fafc;
+  --color-paper: #e7e1d5;
+  --color-surface: #f7f4ee;
+  --color-surface-alt: #ede7db;
+  --color-surface-sunken: #dcd5c8;
+
+  --color-ink: #151510;
+  --color-ink-muted: #4a4840;
+  --color-ink-faint: #5f5b52;
+
+  --color-line: #c9c2b3;
+  --color-line-strong: #151510;
+
+  --color-accent: #b03a18;
+  --color-accent-soft: #f0a483;
+
+  --color-success: #155c3e;
+  --color-success-alt: #1d6b4a;
+  --color-success-surface: #e4f0e8;
+
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
 }
 
 html,
@@ -14,7 +40,24 @@ body {
 }
 
 body {
-  background: #ffffff;
+  margin: 0;
+  background: var(--color-paper);
   color: var(--color-ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  /* Raqamlar ustma-ust turishi uchun — narx va qoldiq jadvallarida muhim. */
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
+
+/**
+ * Mono yorliq: «01 — LANDING», «v14», «4 / 10».
+ * Mono shrift «bu texnik ma'lumot» degan signal beradi va uni oddiy
+ * matndan ajratadi.
+ */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
 }

@@ -207,3 +207,111 @@ tekshirish kerak.
 
 Hozir bularning **sxemasi va interfeysi** bor (`rejections`, `builds` jadvallari,
 `payments_local` bloki, preview yo'llari), amalga oshirilishi yo'q.
+
+---
+
+# Qayta tuzishdan keyingi qarorlar
+
+## 15. Backend NestJS 12, lekin Nest CLI'siz
+
+**Sabab:** `@nestjs/cli` TypeScript 6 ning **dasturiy kompilyator API'sini**
+talab qiladi. TS 7.0 faqat `tsc` ni beradi (API 7.1 da qaytadi), TS 6 ning
+esa barqaror relizi yo'q — npm'da faqat `6.0.0-beta`.
+
+**Qaror:** `tsc` bilan to'g'ridan-to'g'ri quramiz.
+
+**Diqqat:** `tsx` yoki `esbuild` ishlatilmaydi — ular `emitDecoratorMetadata`
+ni bermaydi va NestJS'ning turga asoslangan DI'si buziladi. Dev rejimi:
+`tsc --watch` + `node --watch`.
+
+Tekshirildi: `design:paramtypes` metadata TS 7 da chiqadi, DI ishlaydi.
+
+---
+
+## 16. Paket faqat ikki iste'molchida yaratiladi
+
+Avvalgi tuzilishda 10 ta paket bor edi, ularning 5 tasi faqat backend
+tomonidan ishlatilardi (`db`, `ai`, `agent`, `workspace`, `verify`,
+`review-checker`).
+
+**Qaror:** ular NestJS ichidagi modullar bo'ldi. `packages/` da 5 ta
+chindan umumiy narsa qoldi: `core-rules`, `contracts`, `blocks`,
+`domains`, `design-tokens`.
+
+**Nega muhim:** har ortiqcha paket build grafigiga tugun qo'shadi,
+import yo'lini uzaytiradi va «bu kod kimga tegishli?» degan savolni
+noaniq qoldiradi.
+
+---
+
+## 17. Mock provayder butunlay olib tashlandi
+
+Avval kalitsiz ishlaydigan soxta model bor edi. U qulay edi, lekin
+noto'g'ri: mijozga ilovasi ishlayotgandek ko'rsatardi.
+
+**Qaror:** model kaliti yo'q bo'lsa server **ishga tushmaydi**:
+
+```
+✗ Server ishga tushmadi
+Model kaliti yo'q. AI_GATEWAY_API_KEY ni .env ga qo'shing…
+```
+
+Sozlama NestJS ko'tarilishidan oldin tekshiriladi — aks holda xato
+Nest'ning DI stack trace'i ichida ko'milib qolardi.
+
+**Shu bilan birga** shablondan ham namunaviy ma'lumot olib tashlandi.
+Ekranlar haqiqiy manbadan o'qiydi va baza ulanmagan bo'lsa,
+`not-connected` holatini ochiq ko'rsatadi — «xato» ham emas, bo'sh
+ro'yxat ham emas, uchinchi holat.
+
+---
+
+## 18. TypeScript 7 monorepo'da, 5.9 shablonda
+
+Monorepo TS 7.0.2 da (eng so'nggi barqaror). Expo shabloni o'z
+`node_modules` ida TS 5.9 saqlaydi, chunki Expo 57 hali TS 6 ni kutadi
+va u chiqmagan.
+
+TS 7 da e'tiborga olinishi kerak bo'lgan o'zgarish: **`baseUrl` olib
+tashlangan**. Backend nisbiy import'lar ishlatadi.
+
+Import kengaytmasi ikki loyihada har xil:
+- Backend (`NodeNext`): `.js` **majburiy**
+- Frontend (`bundler`): kengaytma **yo'q**
+
+---
+
+## 19. Global `ValidationPipe` ishlatilmaydi
+
+NestJS'ning standart `ValidationPipe` i `class-validator` ni talab
+qiladi. Bizda validatsiya zod bilan va sxemalar `@amb/contracts` da —
+frontend ham aynan o'shalarni ishlatadi.
+
+Ikkita alohida tekshiruv qatlami vaqt o'tib bir-biridan uzoqlashadi va
+xato ish vaqtida chiqadi.
+
+Zod xabarlari `common/pipes/zod-message.uz.ts` da o'zbek tiliga
+o'giriladi: «Expected string, received undefined» emas,
+«To'ldirilishi shart».
+
+---
+
+## 20. Frontend xususiyat bo'yicha ajratilgan
+
+`app/` da faqat marshrut. Mantiq `features/` da.
+
+**Nega:** «workspace» bitta ekran emas — u telefon ramkasi, chat
+qoplamasi, yuqori panel va SSE hook'idan iborat. Ularni `components/`
+va `hooks/` papkalariga sochib tashlasak, birini o'zgartirish uchun
+uch joyga qarash kerak bo'ladi.
+
+---
+
+## 21. Workspace'da ilova markazda, chat qoplama
+
+Dizayn kanvasidan olingan qaror. Raqobatchilarda chat markazda, ilova
+yon panelda. Bizda teskarisi.
+
+**Sabab:** mijoz chat bilan emas, **ilovasi bilan** qiziqadi. Chat —
+vosita, natija emas. Qoplamani yopib qo'yish mumkin va u yopiq holatda
+ham oqim davom etadi.

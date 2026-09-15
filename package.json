@@ -18,14 +18,14 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
-    "db:generate": "npm run -w @amb/db db:generate",
-    "db:push": "npm run -w @amb/db db:push",
-    "db:studio": "npm run -w @amb/db db:studio",
+    "db:generate": "npm run -w @amb/api db:generate",
+    "db:push": "npm run -w @amb/api db:push",
+    "db:studio": "npm run -w @amb/api db:studio",
     "dev:app": "turbo run dev --filter=@amb/api --filter=@amb/web"
   },
   "devDependencies": {
     "turbo": "^2.10.13",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "@types/node": "^22.15.3",
     "tsx": "^4.20.1"
   }

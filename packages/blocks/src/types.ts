@@ -1,4 +1,4 @@
-import type { PreviewPath } from "@amb/shared";
+import type { PreviewPath } from "@amb/core-rules";
 
 export type BlockId =
   | "auth"

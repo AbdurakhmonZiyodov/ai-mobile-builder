@@ -1,20 +1,29 @@
 {
   "name": "@amb/blocks",
   "version": "0.1.0",
+  "description": "Bloklar reestri: preview belgisi va do'kon talablari bilan",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
-  "dependencies": { "@amb/shared": "*", "zod": "^4.6.5" },
+  "dependencies": {
+    "@amb/core-rules": "*",
+    "zod": "^4.6.5"
+  },
   "devDependencies": {
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "@types/node": "^22.15.3"
   }
 }

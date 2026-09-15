@@ -4,97 +4,117 @@ Biznes g'oyasi bor odam ilovasini do'konga chiqarsin va **tirik ushlab tursin**.
 
 > Boshqalar tez chiqarish uchun. Biz ishlab turishi uchun.
 
-Spek: [`docs/MVP-v1.2-spek.md`](docs/MVP-v1.2-spek.md) · Qarorlar: [`docs/DECISIONS.md`](docs/DECISIONS.md)
+Dizaynda mahsulot nomi: **RIVO Builder**.
 
 ---
 
-## Talablar
+## Uchta loyiha
 
-| Nima | Versiya | Nega |
+| Loyiha | Stek | Hujjatlar |
 | --- | --- | --- |
-| Node | **>= 22** | AI SDK 7 shuni talab qiladi (`.nvmrc` bor: `nvm use`) |
-| PostgreSQL | 16+ | Loyihalar, xabarlar, hisob, rad etishlar korpusi |
-| git | har qanday | Har o'zgarish commit bo'ladi — Undo/Revert shunga tayanadi |
+| [`apps/web`](./apps/web) | Next.js 16 · React 19 · Tailwind v4 | [AI-GUIDE](./apps/web/docs/AI-GUIDE.md) · [DESIGN-SYSTEM](./apps/web/docs/DESIGN-SYSTEM.md) · [COMPONENTS](./apps/web/docs/COMPONENTS.md) |
+| [`apps/api`](./apps/api) | NestJS 12 · Drizzle · AI Gateway | [AI-GUIDE](./apps/api/docs/AI-GUIDE.md) · [API](./apps/api/docs/API.md) · [DATABASE](./apps/api/docs/DATABASE.md) |
+| [`templates/mobile`](./templates/mobile) | Expo SDK 57 · Expo Router | [AI-GUIDE](./templates/mobile/docs/AI-GUIDE.md) · [STRUCTURE](./templates/mobile/docs/STRUCTURE.md) · [BLOCKS](./templates/mobile/docs/BLOCKS.md) |
+
+Har uchalasida `docs/AI-GUIDE.md` bor — **har qanday AI shu fayldan
+boshlaydi** va loyihani tushunib ketadi.
+
+## Umumiy paketlar
+
+Paket faqat **ikki yoki undan ko'p** iste'molchisi bo'lsa yaratiladi.
+
+| Paket | Nima |
+| --- | --- |
+| `@amb/core-rules` | Narx, o'zgarish hisobi, preview qarori, SDK reestri. **I/O yo'q** |
+| `@amb/contracts` | Web ↔ API shartnomasi: zod sxemalar, SSE hodisalari |
+| `@amb/blocks` | Bloklar reestri, preview belgisi va do'kon talablari bilan |
+| `@amb/domains` | 5 domen paketi: model, oqimlar, eval ro'yxati |
+| `@amb/design-tokens` | RIVO palitrasi va tipografiyasi |
+
+`database`, `workspace`, `llm`, `verify`, `review` — paket **emas**, ular
+NestJS ichidagi modullar: faqat backend ishlatadi.
+
+---
 
 ## Ishga tushirish
 
+### Talablar
+
+| Nima | Versiya | Nega |
+| --- | --- | --- |
+| Node | **≥ 22** | AI SDK 7 talabi (`.nvmrc` bor: `nvm use`) |
+| PostgreSQL | 16+ | Loyihalar, hisob, rad etishlar korpusi |
+| git | har qanday | Har o'zgarish commit bo'ladi — Undo shunga tayanadi |
+
+### Qadamlar
+
 ```bash
-nvm use                      # Node 22
+nvm use
 npm install
-cp .env.example .env         # AMB_SECRET_KEY ni to'ldiring
+
+cp .env.example .env
+#  AI_GATEWAY_API_KEY va AMB_SECRET_KEY ni to'ldiring
 
 createdb amb
-npm run db:push              # sxemani yuklash
+npm run db:push
 
 # Expo shabloni bir marta o'rnatiladi — workspace'lar shunga symlink qiladi
-npm --prefix templates/expo-base install
+npm --prefix templates/mobile install
 
-npm run dev                  # api :4000 · web :3000
-npm run dev:app              # yengilroq: faqat api va web, paketlarni kuzatmasdan
+npm run dev        # api :4000 · web :3000
+npm run dev:app    # yengilroq: faqat api va web
 ```
 
-Model kaliti bo'lmasa tizim **mock provayderda** ishlaydi: tasniflash, tool chaqirish,
-verify gate, git versiya va o'zgarish hisobi — hammasi kalitsiz sinaladi.
-Haqiqiy generatsiya uchun `.env` ga `AI_GATEWAY_API_KEY` yoki `ANTHROPIC_API_KEY`
-qo'shing va `AMB_MODEL_PROVIDER` ni bo'sh qoldiring.
+**Model kaliti bo'lmasa server ishga tushmaydi** va buni aniq aytadi.
+Soxta model ataylab yo'q: u mijozga ilovasi ishlayotgandek ko'rsatadi,
+aslida hech narsa yaratilmagan.
 
-## Monorepo tuzilishi
-
-```
-apps/
-  web/              Next.js — chat, preview, fayl daraxti, qoldiq ko'rsatkichi
-  api/              Hono — orkestrator, SSE oqimi, workspace boshqaruvi
-
-packages/
-  shared/           Narx, "o'zgarish" hisobi, preview qarori, SDK reestri, SSE hodisalari
-  db/               Postgres sxemasi (Drizzle) + mijoz kalitlarini shifrlash
-  ai/               Model qatlami: generate(messages, tools, tier) + mock provayder
-  agent/            Agent yadrosi: tasniflash -> kontekst -> tsikl -> verify -> hisob
-  workspace/        Izolyatsiyalangan FS, git versiyalar, MAP.md
-  verify/           Verify gate: typecheck, lint, bundle
-  blocks/           Bloklar reestri (preview belgisi va do'kon talablari bilan)
-  domains/          5 domen paketi: model, oqimlar, eval ro'yxati
-  review-checker/   Apple bandlari tekshiruvi (4.2, 4.3, 2.1, 3.1.1, 5.1.1...)
-
-templates/
-  expo-base/        Expo SDK 57 shabloni — har loyiha shundan yaratiladi
-```
+---
 
 ## Asosiy tsikl
 
 ```
-Mijoz xabari
-  -> tasniflash (arzon model): savol | noaniq | kichik | o'rta | katta
-  -> noaniq bo'lsa: aniqlashtiruvchi savol — BEPUL, tsikl tugaydi
-  -> kontekst: DESIGN.md + PROJECT.md + MAP.md + oxirgi 5 xabar + 3-8 fayl
-  -> bajarish: edit_file (nuqtali diff), to'liq qayta yozish TAQIQLANGAN
-  -> verify gate: typecheck -> lint -> bundle
-  -> o'tmasa: 3 urinish BEPUL tuzatish, keyin halol to'xtash
-  -> o'tsa: git commit = versiya
-  -> hisob: 1 o'zgarish. Diff bo'sh bo'lsa yoki gate o'tmasa — 0
+Mijoz o'z tilida yozadi: «Sartaroshxonam bor, mijozlar navbat olsin»
+  │
+  ├─ domen aniqlanadi (booking), bloklar taklif qilinadi
+  ├─ workspace shablondan yaratiladi                       ~0,2 s
+  │
+  └─ har xabar:
+       tasniflash (arzon model)
+         savol · noaniq · design mode  →  BEPUL, tugadi
+       kontekst: DESIGN.md + PROJECT.md + MAP.md + 5 xabar + 3–8 fayl
+       bajarish: edit_file — nuqtali diff
+       verify gate: typecheck → lint → bundle
+         o'tmadi → 3 ta BEPUL tuzatish → halol to'xtash
+       git commit = versiya
+       hisob: 1 o'zgarish
 ```
 
-## API
+### Nima hisoblanadi
 
-| Marshrut | Nima qiladi |
+| Holat | Hisob |
 | --- | --- |
-| `POST /projects` | Loyiha yaratadi, domen paketini taxmin qiladi, workspace ochadi |
-| `POST /chat` | Agent tsikli — **SSE oqimi** |
-| `GET /preview/:id` | Qaysi preview yo'li va **nima uchun** (bir jumlada) |
-| `POST /preview/:id/web` | Veb preview yig'adi |
-| `GET /review/:id` | Review Checker — do'kon bandlari |
-| `POST /handoff/:id` | Dasturchiga topshirish paketi |
-| `POST /backend/:id` | Mijozning Supabase/Firebase kalitlari (shifrlangan) |
-| `POST /backend/:id/burn-service-role` | `service_role` kalitini o'chirish |
-| `GET /projects/:id/usage` | AI xarajati va o'zgarish boshiga narx |
-| `GET /catalog/*` | Bloklar, domenlar, narx, preview yo'llari, SDK'lar |
+| Savol, noaniq so'rov, design mode | 0 |
+| Xato tuzatish | 0 |
+| Verify gate o'tmadi | 0 |
+| Diff bo'sh | 0 |
+| Kichik / o'rta / katta o'zgarish | **1** |
+
+Qaror bitta funksiyada: `@amb/core-rules` → `decideCharge()`.
+
+---
 
 ## Buyruqlar
 
 ```bash
-npm run dev         # hammasi
-npm run build       # hammasi
-npm run typecheck
-npm run db:push     # sxemani yangilash
-npm run db:studio
+npm run dev         npm run build       npm run typecheck
+npm run db:push     npm run db:studio
 ```
+
+## Hujjatlar
+
+| Fayl | Nima uchun |
+| --- | --- |
+| [`docs/STRUKTURA-TAKLIFI.md`](./docs/STRUKTURA-TAKLIFI.md) | Struktura va uning sabablari |
+| [`docs/DECISIONS.md`](./docs/DECISIONS.md) | Qarorlar, spekdan chekinishlar, topilgan xatolar |
+| [`docs/MVP-v1.2-spek.md`](./docs/MVP-v1.2-spek.md) | Mahsulot spetsifikatsiyasi |
