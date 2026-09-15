@@ -3,6 +3,10 @@
 Spekda aniq yozilmagan yoki qurish paytida haqiqat bilan to'qnashgan joylar.
 Har biri ochiq: raqam yoki yondashuv o'zgartirilsa, qayerga tegish kerakligi ko'rsatilgan.
 
+> **Eslatma:** 1–14-qarorlar qayta tuzishdan OLDIN yozilgan. Fayl yo'llari
+> yangi tuzilishga moslandi, lekin qarorning o'zi va sababi o'zgarmadi.
+
+
 ---
 
 ## 1. Sinov tarifi 0 emas, 5 o'zgarish
@@ -30,7 +34,7 @@ cheksiz bepul o'zgarish oladi. Marja teshigi.
 **Qaror:** design mode'da tool to'plami faqat o'qish + `update_design_note`
 (DESIGN.md). Ilova kodi tegilmaydi.
 
-**Qayerda:** `packages/agent/src/tools.ts` -> `ToolContext.readOnly`
+**Qayerda:** `apps/api/src/modules/agent/tools/tool.types.ts` -> `ToolContext.readOnly`
 
 ---
 
@@ -59,7 +63,7 @@ halol to'xtashga boradi. Mijoz esa hech narsa olmaydi.
 
 **Qaror:** qoida o'chirilgan. React Native matnida u baribir ma'nosiz.
 
-**Qayerda:** `templates/expo-base/eslint.config.js`
+**Qayerda:** `templates/mobile/eslint.config.js`
 
 ---
 
@@ -72,7 +76,7 @@ urinadi, o'zgarish hisoblanmaydi.
 
 **Qaror:** hamma joyda `npm exec -- <vosita> <bayroqlar>`.
 
-**Qayerda:** `packages/verify/src/index.ts`, `apps/api/src/routes/preview.ts`
+**Qayerda:** `apps/api/src/modules/verify/verify.service.ts`, `apps/api/src/modules/preview/preview.service.ts`
 
 ---
 
@@ -90,7 +94,7 @@ yarmi ketadi».
 o'rnatishdan oldin `isolateDependencies()` chaqirilishi **shart**. Ishlab
 chiqarishda buning o'rnini Docker obrazi qatlami egallaydi.
 
-**Qayerda:** `packages/workspace/src/local-driver.ts`
+**Qayerda:** `apps/api/src/infrastructure/workspace/drivers/local.driver.ts`
 
 ---
 
@@ -135,7 +139,7 @@ mijozning bundle'i boshqasiga tushishi mumkin edi.
 qo'yadi. `__dirname` har workspace uchun boshqa — kesh ham ajralgan.
 Tekshirildi: o'zgarish `--clear` siz ham 1.7 s da chiqadi.
 
-**Qayerda:** `templates/expo-base/metro.config.js`
+**Qayerda:** `templates/mobile/metro.config.js`
 
 ---
 
@@ -150,7 +154,7 @@ Mijoz uchun bu "pul oldi, hech narsa qilmadi" degani.
 Tugma **haqiqiy ish qiladi** — bo'sh `onPress` Apple 2.1 bandi bo'yicha rad
 etish sababi va Review Checker uni topadi.
 
-**Qayerda:** `templates/expo-base/app/(app)/index.tsx`
+**Qayerda:** `templates/mobile/app/(app)/index.tsx`
 
 ---
 

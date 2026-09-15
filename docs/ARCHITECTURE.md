@@ -1,94 +1,85 @@
-# Arxitektura
+# Arxitektura — umumiy xarita
 
-Spekning 8-bo'limi qaysi paketda yashaydi.
+Bu yuqori darajadagi xarita. Tafsilot har loyihaning **o'z** hujjatida:
 
-## Qatlamlar
+| Loyiha | Hujjat |
+| --- | --- |
+| Backend | [`apps/api/docs/ARCHITECTURE.md`](../apps/api/docs/ARCHITECTURE.md) |
+| Frontend | [`apps/web/docs/ARCHITECTURE.md`](../apps/web/docs/ARCHITECTURE.md) |
+| Mobil shablon | [`templates/mobile/docs/STRUCTURE.md`](../templates/mobile/docs/STRUCTURE.md) |
+
+---
+
+## Qismlar
 
 ```
-                 apps/web  (Next.js)
-                     |  HTTP + SSE
-                 apps/api  (Hono)
-                     |
-    +----------------+----------------+
-    |                |                |
-@amb/agent      @amb/workspace    @amb/db
-    |                |
-@amb/ai          @amb/verify
-    |
-@amb/shared  <- @amb/blocks, @amb/domains, @amb/review-checker
+        ┌──────────────┐
+        │   apps/web   │  Next.js — mijoz ishlaydigan interfeys
+        └──────┬───────┘
+               │ HTTP + SSE
+        ┌──────▼───────┐
+        │   apps/api   │  NestJS — orkestrator
+        └──────┬───────┘
+               │
+       ┌───────┼────────────────┐
+       │       │                │
+  ┌────▼───┐ ┌─▼──────────┐ ┌───▼──────────────┐
+  │Postgres│ │ AI Gateway │ │ workspaces/<id>/ │
+  │        │ │  (model)   │ │  Expo loyihasi   │
+  └────────┘ └────────────┘ └──────────────────┘
+                                     ▲
+                                     │ nusxa
+                            ┌────────┴─────────┐
+                            │ templates/mobile │
+                            └──────────────────┘
 ```
 
-`@amb/shared` — barcha qatlamlar bog'liq bo'lgan yagona haqiqat manbai:
-narx, "o'zgarish" hisobi, preview qarori, SDK reestri, SSE hodisalari, HTTP shartnomalari.
+Backend **kod yozmaydi** — model yozadi. Backend model uchun kontekst
+tayyorlaydi, tool beradi, natijani tekshiradi va hisobni yuritadi.
 
-## Nega hisob faqat bitta funksiyada
+## Umumiy paketlar
 
-`decideCharge()` — `packages/shared/src/changes.ts`.
+Paket faqat **ikki yoki undan ko'p** iste'molchisi bo'lsa yaratiladi.
 
-Mahsulotning uchta va'dasi shu funksiyada yashaydi:
+| Paket | Kim ishlatadi | Nima |
+| --- | --- | --- |
+| `@amb/core-rules` | api + web | Narx, hisob, preview qarori, SDK reestri. **I/O yo'q** |
+| `@amb/contracts` | api + web | Zod sxemalar va SSE hodisalari |
+| `@amb/blocks` | api + web | Bloklar reestri |
+| `@amb/domains` | api + web | 5 domen paketi |
+| `@amb/design-tokens` | web + mobil | RIVO palitrasi va tipografiyasi |
 
-| Va'da | Kodda |
+Bitta iste'molchili kod paket bo'lmaydi: `database`, `workspace`, `llm`,
+`verify`, `review` — bular NestJS ichidagi modullar.
+
+## Mahsulot qoidalari qayerda yashaydi
+
+| Qoida | Fayl |
 | --- | --- |
-| Xato tuzatish bepul | `kind: "repair"` -> 0 |
-| Tekshiruvdan o'tmasa hisoblanmaydi | `verify === "failed"` -> 0 |
-| Bo'sh diff hech qachon hisoblanmaydi | `!producedDiff` -> 0 |
-| Savol va noaniq so'rov bepul | `question`, `unclear` -> 0 |
+| Nima hisoblanadi | `packages/core-rules/src/changes.ts` → `decideCharge()` |
+| Narx va tariflar | `packages/core-rules/src/pricing.ts` |
+| Qaysi preview yo'li | `packages/core-rules/src/preview.ts` → `decidePreviewPath()` |
+| Qaysi SDK qo'llab-quvvatlanadi | `packages/core-rules/src/sdk.ts` |
+| Blok Expo Go'da ishlaydimi | `packages/blocks/src/registry.ts` |
+| Soha uchun «tayyor» nima | `packages/domains/src/packs/*.ts` → `evals` |
+| Do'kon rad etish sabablari | `apps/api/src/modules/review/rules/*.ts` |
 
-Hisob boshqa hech qayerda hisoblanmaydi. Yangi bepul holat qo'shilsa, faqat shu
-jadval o'zgaradi — API, agent va UI tegilmaydi.
+Bular **sof funksiyalar va ma'lumot** — I/O yo'q, shuning uchun bazasiz
+testlanadi va frontend ham aynan o'shalarni ko'rsatadi.
 
-## Kontekst byudjeti
-
-`packages/agent/src/context.ts` -> `BUDGET`. Butun repo hech qachon yuborilmaydi.
-
-| Bo'lak | Chegara |
-| --- | --- |
-| DESIGN.md + PROJECT.md | 1 500 token |
-| MAP.md | 1 000 |
-| Suhbat (oxirgi 5 to'liq, qolgani xulosa) | 1 500 |
-| Tegishli fayllar (qidiruv orqali 3–8) | 15 000 |
-| Tool javobi | 4 000 |
-
-`MAP.md` har xabarda qaytadan yasaladi: ekranlar -> marshrutlar, komponentlar,
-mantiq fayllari va **300 qatordan oshgan fayllar ro'yxati**.
-
-## Model tier'lari
-
-`packages/ai/src/models.ts`. Env orqali almashtiriladi — model drifti bo'lganda
-kod tegilmaydi.
-
-| Tier | Qachon |
-| --- | --- |
-| `cheap` | Tasniflash — har xabarda ishlaydi |
-| `standard` | Kichik va o'rta tahrir, savolga javob |
-| `strong` | Katta o'zgarish; va **bir xil xato ikki marta takrorlansa** |
-
-## Xavfsizlik chegaralari
-
-| Chegara | Qayerda |
-| --- | --- |
-| Har fayl yo'li workspace ichida | `LocalWorkspace.resolve()` |
-| Loyiha ID formati | `WorkspaceManager.assertSafeId()` |
-| Preview statik fayllari | `apps/api/src/server.ts` — base prefiks tekshiruvi |
-| Mijoz kalitlari AES-256-GCM | `packages/db/src/crypto.ts` |
-| `service_role` hech qachon qaytarilmaydi | `GET /backend/:id` faqat `hasAnonKey` beradi |
-| `service_role` o'chiriladi | `POST /backend/:id/burn-service-role` |
-
-**Hali yo'q:** konteyner izolyatsiyasi (Firecracker / gVisor), tarmoq oq ro'yxati,
-KMS. MVP shu mashinaning FS'ida ishlaydi — ishlab chiqarishga tayyor emas.
-Spek 16.2 shu bo'limning to'liq ro'yxati.
-
-## Preview qarori
-
-`packages/shared/src/preview.ts` -> `decidePreviewPath()`. Sof funksiya, testlanadi.
+## Ma'lumot oqimi — bitta o'zgarish
 
 ```
-bloklar dev client talab qiladimi?
-  ha  -> Apple akkaunt bormi? -> dev_client : web
-  yo'q -> loyiha SDK'si Expo Go'nikidan yuqorimi?
-            ha  -> Apple akkaunt bormi? -> eas_go : web
-            yo'q -> expo_go
+web: ChatOverlay → streamAgent() ──POST /chat──▶ api: AgentController
+                                                      │
+                                    ClassifierService ─┤ arzon model
+                                  ContextBuilderService┤ MAP.md + 3–8 fayl
+                                         LlmService ───┤ tool tsikli
+                                       WorkspaceService┤ edit_file → git
+                                        VerifyService ─┤ tsc, eslint, bundle
+                                        RepairService ─┤ 3 bepul urinish
+                                       BillingService ─┘ hisob
+                                                      │
+web: timeline.ts ◀────────SSE hodisalari──────────────┘
+     (texnik atama → o'zbekcha matn)
 ```
-
-Har javob bilan birga **bir jumlalik o'zbekcha sabab** qaytadi — mijoz nima uchun
-shunday ekanini doim biladi.
