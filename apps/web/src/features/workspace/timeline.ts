@@ -87,3 +87,19 @@ function verifyResultUz(
   return `${label}: o'tmadi\n${errors.slice(0, 3).join("\n")}`;
 }
 
+/**
+ * Saqlangan suhbatni ekran qatorlariga aylantiradi.
+ *
+ * Nega kerak: mijoz sahifani yopib qaytsa yoki loyihani qayta ochsa,
+ * o'zi yozgan gaplar ko'rinishi kerak. Avval ular yo'qolardi —
+ * mijoz g'oyasini yozgan, ekranda esa bo'sh suhbat turardi.
+ */
+export function toTimelineHistory(
+  messages: Array<{ id: string; role: string; content: string }>,
+): TimelineEntry[] {
+  return messages.map((m) => ({
+    id: m.id,
+    kind: m.role === "user" ? "user" : "agent",
+    text: m.content,
+  }));
+}

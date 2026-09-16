@@ -49,12 +49,23 @@
     var(--color-accent-via) 52%,
     var(--color-accent-to) 100%
   );
-  /* Telefon maketidan yuqorida va pastda qoldiriladigan joy. */
-  --phone-reserve: 11.5rem;
-  /* Telefon ustidagi holat matni ishg'ol qiladigan qator. */
-  --phone-status-row: 2.5rem;
-  /* Workspace ustunlarining yagona balandligi — suhbat va telefon uchun. */
-  --workspace-panel-h: min(844px, calc(100dvh - var(--phone-reserve)));
+  /*
+   * Sahifaning o'zi egallaydigan joy: yuqori panel (~57px) + `p-5`
+   * chekkalari (40px) + kichik zaxira. Ilgari 11.5rem edi — ortiqcha
+   * 80px shunchaki bo'sh turar va telefonni keraksiz kichraytirardi.
+   */
+  --phone-reserve: 8rem;
+  /*
+   * Workspace ustunlarining yagona balandligi — suhbat va markaziy ustun
+   * shundan o'lchanadi. Telefon ramkasi bu qiymatni O'QIMAYDI: u o'ziga
+   * berilgan joyni `ResizeObserver` bilan o'lchaydi (`phone-frame.tsx`).
+   *
+   * Yuqori chegara 844px emas, 1040px: ilgari 844 qurilma balandligi edi
+   * va undan oshish ma'nosiz edi. Endi ilova masshtablanadi, ya'ni panel
+   * kattalashsa maket 1:1 ga yaqinlashadi — baland ekranda buni cheklash
+   * faqat rasm sifatini yo'qotardi.
+   */
+  --workspace-panel-h: min(1040px, calc(100dvh - var(--phone-reserve)));
 }
 
 html,
@@ -146,17 +157,63 @@ body {
 }
 
 /**
- * Telefon maketi.
+ * Telefon ramkasining qatlamlari.
  *
- * Nega qat'iy 844px emas: 1440×900 ekranda telefon kesilib qolardi.
- * Balandlik ekranga moslashadi, nisbat (390:844) esa saqlanadi —
- * shunda maket haqiqiy qurilmadek ko'rinishda qoladi.
+ * Bu yerda FAQAT ko'rinish bor — bitta ham o'lcham yo'q. Ramkaning
+ * kengligi, balandligi, burchak radiusi va qirra qalinligi
+ * `phone-frame.tsx` da hisoblanadi va inline CSS o'zgaruvchi sifatida
+ * uzatiladi (`--phone-edge`, `--phone-bezel`, `--phone-screen-r`, ...).
+ *
+ * NEGA shunday: masshtab koeffitsienti konteynerning haqiqiy o'lchamidan
+ * chiqadi va uni faqat JS biladi. Agar o'lchamning bir qismi CSS'da,
+ * bir qismi JS'da yashasa, ular bir-biridan ajralib qolardi — ramka
+ * ichida bir necha piksel og'ish paydo bo'lardi va sababini topish qiyin.
  */
-.phone-shell {
-  /* Holat matni qatori ayiriladi — shunda telefon va suhbat pastda tekis tugaydi. */
-  height: calc(var(--workspace-panel-h) - var(--phone-status-row));
-  aspect-ratio: 390 / 844;
-  max-width: 100%;
+
+/**
+ * Tashqi metall qirra.
+ *
+ * Gradient EMAS: dizayn tizimida gradient sahifadagi yagona asosiy amal
+ * uchun saqlanadi. Chekka ikkita TEKIS qatlamdan quriladi — `line-strong`
+ * qirra, uning ichida `line` ingichka chiziq (`.phone-bezel` soyasi).
+ * Shu ikki pog'ona metall chekka hissini gradientsiz beradi.
+ */
+.phone-edge {
+  padding: var(--phone-edge);
+  border-radius: calc(var(--phone-screen-r) + var(--phone-bezel) + var(--phone-edge));
+  background: var(--color-line-strong);
+  /* Quyuq fonda soya deyarli ko'rinmaydi — shuning uchun juda keng va yumshoq. */
+  box-shadow: 0 30px 60px -26px color-mix(in srgb, var(--color-paper) 90%, transparent);
+}
+
+/* Quyuq korpus. Tashqi 1px `line` — qirradan korpusga o'tish pog'onasi. */
+.phone-bezel {
+  padding: var(--phone-bezel);
+  border-radius: calc(var(--phone-screen-r) + var(--phone-bezel));
+  background: var(--color-paper);
+  box-shadow: 0 0 0 1px var(--color-line);
+}
+
+/* Ekranning o'zi. `overflow: hidden` — masshtablangan iframe burchaklardan chiqmasin. */
+.phone-screen {
+  border-radius: var(--phone-screen-r);
+  background: var(--color-paper);
+  overflow: hidden;
+}
+
+/**
+ * Shisha hissi — ekran atrofidagi ingichka ichki soya.
+ * Alohida qatlam, chunki iframe `.phone-screen` ning o'z `inset` soyasini
+ * yopib qo'yardi: u ekranning ustida chizilishi kerak.
+ */
+.phone-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 7%, transparent),
+    inset 0 2px 6px color-mix(in srgb, var(--color-paper) 65%, transparent);
 }
 
 /**

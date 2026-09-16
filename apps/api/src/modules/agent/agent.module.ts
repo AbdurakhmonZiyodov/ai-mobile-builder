@@ -7,12 +7,13 @@ import { AgentController } from "./agent.controller.js";
 import { AgentService } from "./agent.service.js";
 import { ClassifierService } from "./classifier.service.js";
 import { ContextBuilderService } from "./context-builder.service.js";
+import { PlannerService } from "./planner.service.js";
 import { RepairService } from "./repair.service.js";
 
 @Module({
   imports: [WorkspaceModule, VerifyModule, BillingModule, ProjectsModule],
   controllers: [AgentController],
-  providers: [AgentService, ClassifierService, ContextBuilderService, RepairService],
+  providers: [AgentService, ClassifierService, ContextBuilderService, PlannerService, RepairService],
   exports: [AgentService],
 })
 export class AgentModule {}

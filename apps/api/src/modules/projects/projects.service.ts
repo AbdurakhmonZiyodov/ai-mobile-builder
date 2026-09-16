@@ -109,6 +109,27 @@ export class ProjectsService {
     };
   }
 
+  /** Suhbat tarixi — birinchi qurishda mijozning promptini olish uchun. */
+  async repositoryMessages(projectId: string) {
+    return this.repository.listMessages(projectId);
+  }
+
+  /**
+   * Nomni yangilaydi.
+   *
+   * Birinchi qurishdan keyin chaqiriladi: reja modelning taklif qilgan
+   * nomini beradi va u domenga qarab yasalgan umumiy nomdan aniqroq.
+   */
+  async rename(projectId: string, name: string): Promise<void> {
+    await this.repository.rename(projectId, name);
+  }
+
+  /** Loyihada hech qanday versiya yo'qmi — ya'ni hali qurilmaganmi. */
+  async isUnbuilt(projectId: string): Promise<boolean> {
+    const versions = await this.repository.listVersions(projectId, 1);
+    return versions.length === 0;
+  }
+
   async findOrFail(projectId: string): Promise<Project> {
     const project = await this.repository.findById(projectId);
     if (!project) throw new NotFoundException({ messageUz: "Loyiha topilmadi." });

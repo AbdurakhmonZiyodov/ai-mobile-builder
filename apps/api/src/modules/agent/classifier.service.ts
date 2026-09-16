@@ -168,5 +168,7 @@ export function summaryFor(kind: TaskKind): string {
       return "Katta o'zgarish — 1 o'zgarish.";
     case "repair":
       return "Xato tuzatish — bepul.";
+    case "first_build":
+      return "Ilovangizni quryapman — bu birinchi qurish, bepul.";
   }
 }

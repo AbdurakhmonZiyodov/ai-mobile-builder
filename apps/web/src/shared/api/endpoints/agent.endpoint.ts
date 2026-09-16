@@ -41,4 +41,21 @@ export class AgentEndpoint {
   ): Promise<void> {
     return this.sse.stream<AgentEvent>(BASE, request, onEvent, options);
   }
+
+  /**
+   * Birinchi qurish oqimi.
+   *
+   * Loyiha yaratilgandan keyin BIR MARTA chaqiriladi: mijozning
+   * promptidan reja tuziladi va ilova quriladi.
+   *
+   * Nega alohida: bu yerda yuboriladigan xabar yo'q — prompt allaqachon
+   * saqlangan. Va bu hisoblanmaydi, mijoz hali tarifga o'tmagan.
+   */
+  buildFirst(
+    projectId: string,
+    onEvent: AgentEventHandler,
+    options?: StreamAgentOptions,
+  ): Promise<void> {
+    return this.sse.stream<AgentEvent>(`${BASE}/build/${projectId}`, {}, onEvent, options);
+  }
 }

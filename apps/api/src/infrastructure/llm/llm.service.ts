@@ -34,7 +34,11 @@ export class LlmService {
    */
   async generate(opts: GenerateOptions): Promise<GenerateResult> {
     try {
-      return await this.provider.generate(opts);
+      const result = await this.provider.generate(opts);
+      this.logger.debug(
+        `${opts.tier}: ${result.usage.inputTokens}+${result.usage.outputTokens} tok, ${result.costCents.toFixed(2)} sent`,
+      );
+      return result;
     } catch (err) {
       const classified = classifyLlmError(err);
       this.logger.error(

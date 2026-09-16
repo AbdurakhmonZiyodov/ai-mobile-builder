@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { AgentEvent } from "@amb/contracts";
-import { ID, type TaskKind } from "@amb/core-rules";
+import { balanceLabelUz, ID, remaining, type TaskKind } from "@amb/core-rules";
 import { getDomainPack } from "@amb/domains";
 import { LlmService } from "../../infrastructure/llm/llm.service.js";
 import type { ChatMessage, ModelTier } from "../../infrastructure/llm/llm.types.js";
@@ -12,7 +12,9 @@ import type { Project } from "../../infrastructure/database/schema/index.js";
 import { ClassifierService, summaryFor } from "./classifier.service.js";
 import { ContextBuilderService } from "./context-builder.service.js";
 import { RepairService } from "./repair.service.js";
-import { ANSWER_SYSTEM, builderSystem } from "./prompts/index.js";
+import { ANSWER_SYSTEM, builderSystem, firstBuildInstruction } from "./prompts/index.js";
+import { PlannerService } from "./planner.service.js";
+import { assertWithinBudget } from "./cost-guard.js";
 import { buildTools } from "./tools/tool.registry.js";
 import type { RunAgentInput, RunAgentResult } from "./agent.types.js";
 
@@ -37,10 +39,166 @@ export class AgentService {
     private readonly workspaces: WorkspaceService,
     private readonly classifier: ClassifierService,
     private readonly context: ContextBuilderService,
+    private readonly planner: PlannerService,
     private readonly repair: RepairService,
     private readonly billing: BillingService,
     private readonly llm: LlmService,
   ) {}
+
+  /**
+   * Birinchi qurish — promptdan ishlaydigan ilovagacha.
+   *
+   * Nega alohida metod, oddiy `run` emas:
+   *  · tasniflash kerak emas — nima qilish kerakligi aniq
+   *  · avval REJA tuziladi va mijozga ko'rsatiladi
+   *  · hisoblanmaydi: mijoz hali tarifga o'tmagan, u g'oyasini ko'rmoqchi
+   */
+  async runFirstBuild(projectId: string, emit: Emit): Promise<RunAgentResult> {
+    const runId = ID.run();
+    const startedAt = Date.now();
+
+    const project = await this.projects.findById(projectId);
+    if (!project) throw new NotFoundException({ messageUz: "Loyiha topilmadi." });
+
+    const ws = await this.workspaces.ensure(project.id);
+    const pack = getDomainPack(project.domainPack);
+
+    // Mijozning birinchi jumlasi — loyiha yaratilganda saqlangan.
+    const history = await this.projects.listMessages(project.id);
+    const prompt = history.find((m) => m.role === "user")?.content ?? "";
+
+    emit({ type: "run.started", runId, at: startedAt });
+    emit({
+      type: "run.classified",
+      kind: "first_build",
+      billable: false,
+      summaryUz: "Ilovangizni quryapman — bu birinchi qurish, bepul.",
+    });
+
+    // --- 1. Reja ---------------------------------------------------------
+    const plan = await this.planner.plan(prompt, pack);
+    let costCents = plan.costCents;
+    assertWithinBudget(costCents, "first_build");
+
+    emit({
+      type: "plan",
+      steps: plan.screens.map((s) => `${s.nameUz} — ${s.purposeUz}`),
+    });
+    emit({ type: "text", delta: `${plan.summaryUz}\n\n` });
+
+    // --- 2. Qurish -------------------------------------------------------
+    const changes: EditResult[] = [];
+    const tools = buildTools({
+      ws,
+      changes,
+      onFileChanged: (change) =>
+        emit({
+          type: "file.changed",
+          path: change.path,
+          action: change.action,
+          added: change.added,
+          removed: change.removed,
+        }),
+    });
+
+    const docs = await this.context.loadDocs(ws);
+    const result = await this.llm.generate({
+      /**
+       * Qurish `standard` da (sonnet), `strong` da emas.
+       *
+       * O'lchandi: opus bilan bitta birinchi qurish $3,09 turdi — bu
+       * spekdagi butun ilova byudjetining ($12–18) chorak qismi, va
+       * mijoz hali bir tiyin to'lamagan.
+       *
+       * Sonnet $2/$10, opus $5/$25 — 2,5 barobar farq. Sifat farqi esa
+       * ekran yozishda sezilmaydi: murakkab qarorlar REJA qadamida
+       * qabul qilinadi, u `strong` da qoladi.
+       */
+      tier: "standard",
+      messages: [
+        {
+          role: "system",
+          content: builderSystem({
+            appName: plan.appNameUz,
+            sdk: project.sdk,
+            blocks: project.blocks,
+            pack,
+            designMd: docs.designMd,
+            projectMd: docs.projectMd,
+            mapMd: docs.mapMd,
+          }),
+        },
+        { role: "user", content: prompt },
+        { role: "user", content: firstBuildInstruction(JSON.stringify(plan, null, 2)) },
+      ],
+      tools,
+      // 40 qadam ortiqcha edi: 12 fayl uchun 24 yetadi va chegara
+      // cheksiz aylanishdan saqlaydi.
+      maxSteps: 24,
+      onText: (delta) => emit({ type: "text", delta }),
+      onToolStart: (tool, argsPreview) => emit({ type: "tool.started", tool, argsPreview }),
+      onToolEnd: (tool, r) => emit({ type: "tool.finished", tool, ok: r.ok, summary: r.summary ?? "" }),
+    });
+    costCents += result.costCents;
+    assertWithinBudget(costCents, "first_build");
+
+    // --- 3. Verify va tuzatish -------------------------------------------
+    const repaired = await this.repair.verifyAndRepair({
+      ws,
+      kind: "large",
+      tools,
+      mapMd: docs.mapMd,
+      // Tuzatish ham `standard` dan boshlanadi. Bir xil xato takrorlansa,
+      // RepairService o'zi `strong` ga ko'taradi — ya'ni opus faqat
+      // haqiqatan kerak bo'lganda ishlaydi.
+      startTier: "standard",
+      emit,
+    });
+    costCents += repaired.costCents;
+
+    const settle = (gitSha: string | null, ok: boolean): RunAgentResult => {
+      emit({
+        type: "charge",
+        units: 0,
+        reasonUz: "Birinchi qurish — bepul.",
+        remaining: remaining(this.billing.balanceOf(project)),
+        balanceLabelUz: balanceLabelUz(this.billing.balanceOf(project)),
+      });
+      const durationMs = Date.now() - startedAt;
+      emit({ type: "run.finished", runId, ok, versionId: gitSha, durationMs });
+
+      return {
+        runId,
+        kind: "first_build",
+        units: 0,
+        chargeReasonUz: "Birinchi qurish — bepul.",
+        gitSha,
+        verify: repaired.verify,
+        changedFiles: changes,
+        assistantText: result.text,
+        repairAttempts: repaired.attempts,
+        costCents,
+        durationMs,
+        ok,
+      };
+    };
+
+    if (!repaired.verify.ok) {
+      await ws.discardUncommitted();
+      emit({
+        type: "error",
+        messageUz:
+          "Ilovani qurib bo'lmadi. Bu hisoblanmadi — g'oyangizni boshqacha aytib ko'ring yoki qayta urinib ko'ring.",
+      });
+      return settle(null, false);
+    }
+
+    const gitSha = await ws.commit(`first_build: ${plan.appNameUz}`);
+    await this.projects.rename(project.id, plan.appNameUz);
+    this.logger.log(`${runId}: birinchi qurish tayyor, ${changes.length} fayl`);
+
+    return settle(gitSha, true);
+  }
 
   async run(input: RunAgentInput, emit: Emit): Promise<RunAgentResult> {
     const runId = ID.run();

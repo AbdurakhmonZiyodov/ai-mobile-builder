@@ -1,4 +1,4 @@
-import { Controller, Logger, Post, Res } from "@nestjs/common";
+import { ConflictException, Controller, Logger, Param, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { sendMessageInput, type AgentEvent, type SendMessageInput } from "@amb/contracts";
 import { ID } from "@amb/core-rules";
@@ -43,12 +43,7 @@ export class AgentController {
 
     await this.repository.addMessage(ID.message(), project.id, "user", dto.text);
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    // Nginx kabi proksilar SSE'ni buferlaydi va oqim to'xtab qoladi.
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
+    this.openStream(res);
 
     const emit = (event: AgentEvent): void => {
       res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
@@ -85,6 +80,58 @@ export class AgentController {
     } finally {
       res.end();
     }
+  }
+
+  /**
+   * POST /chat/build/:id — birinchi qurish, SSE oqimi.
+   *
+   * Nega alohida endpoint: bu yerda tasniflash yo'q. Mijoz g'oyasini
+   * aytdi va ilova qurilishi kerak — so'rov turini aniqlashning hojati
+   * yo'q. Avval reja tuziladi va mijozga ko'rsatiladi.
+   *
+   * Nega bir marta: takroran chaqirilsa mijoz ishini yo'qotardi.
+   * Loyihada versiya bo'lsa, 409 qaytadi.
+   */
+  @Post("build/:id")
+  async build(@Param("id") id: string, @Res() res: Response): Promise<void> {
+    const project = await this.projects.findOrFail(id);
+
+    if (!(await this.projects.isUnbuilt(project.id))) {
+      throw new ConflictException({
+        messageUz: "Bu ilova allaqachon qurilgan. O'zgartirish uchun suhbatdan foydalaning.",
+      });
+    }
+
+    this.openStream(res);
+    const emit = (event: AgentEvent): void => {
+      res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+    };
+
+    try {
+      const result = await this.agent.runFirstBuild(project.id, emit);
+      await this.persist(project.id, "birinchi qurish", result);
+    } catch (err) {
+      this.logger.error("Birinchi qurish yiqildi", err instanceof Error ? err.stack : String(err));
+      emit({
+        type: "error",
+        messageUz:
+          err instanceof LlmError
+            ? err.messageUz
+            : "Ilovani qurib bo'lmadi. Bu hisoblanmadi — qayta urinib ko'ring.",
+      });
+    } finally {
+      res.end();
+    }
+  }
+
+  /** SSE sarlavhalari — ikkala oqim uchun bir xil. */
+  private openStream(res: Response): void {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    // Nginx kabi proksilar SSE'ni buferlaydi va oqim to'xtab qoladi.
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
   }
 
   /**

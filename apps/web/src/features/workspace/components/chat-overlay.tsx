@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/shared/ui";
 import type { TimelineEntry, TimelineKind } from "../timeline";
+import { FileGroup } from "./file-group";
 
 interface ChatOverlayProps {
   entries: TimelineEntry[];
@@ -64,11 +65,15 @@ export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
           </p>
         ) : null}
 
-        {entries.map((entry) => (
-          <div key={entry.id} className={ROW_STYLES[entry.kind]}>
-            {entry.text}
-          </div>
-        ))}
+        {groupFileRuns(entries).map((item) =>
+          item.kind === "files" ? (
+            <FileGroup key={item.key} entries={item.entries} />
+          ) : (
+            <div key={item.entry.id} className={ROW_STYLES[item.entry.kind]}>
+              {item.entry.text}
+            </div>
+          ),
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -104,6 +109,41 @@ export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
       </form>
     </div>
   );
+}
+
+/** Suhbatda ko'rsatiladigan element: yakka qator yoki fayllar to'plami. */
+type ChatItem =
+  | { kind: "files"; key: string; entries: TimelineEntry[] }
+  | { kind: "row"; entry: TimelineEntry };
+
+/**
+ * Ketma-ket fayl qatorlarini bitta to'plamga yig'adi.
+ *
+ * Nega ketma-ketligi muhim: fayllar orasiga agentning izohi tushsa, ular
+ * boshqa-boshqa qadamlar — ularni bir to'plamga qo'shish suhbatning
+ * tartibini buzardi. Shuning uchun faqat YONMA-YON turganlari birlashadi.
+ */
+function groupFileRuns(entries: TimelineEntry[]): ChatItem[] {
+  const items: ChatItem[] = [];
+  let run: TimelineEntry[] = [];
+
+  const flush = () => {
+    if (run.length === 0) return;
+    items.push({ kind: "files", key: run[0].id, entries: run });
+    run = [];
+  };
+
+  for (const entry of entries) {
+    if (entry.kind === "file") {
+      run.push(entry);
+      continue;
+    }
+    flush();
+    items.push({ kind: "row", entry });
+  }
+  flush();
+
+  return items;
 }
 
 /** Har qator turi o'z ko'rinishiga ega — mijoz oqimni bir qarashda o'qiydi. */

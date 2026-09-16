@@ -50,6 +50,13 @@ export class ProjectsRepository {
       .where(eq(projects.id, id));
   }
 
+  async rename(id: string, name: string): Promise<void> {
+    await this.database.db
+      .update(projects)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
   async updateStatus(id: string, status: Project["status"]): Promise<void> {
     await this.database.db
       .update(projects)

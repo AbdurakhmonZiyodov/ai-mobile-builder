@@ -58,9 +58,32 @@ ${input.projectMd || "(bo'sh)"}
 ${input.mapMd}`;
 }
 
+/**
+ * Soha namunasini promptga qo'shadi.
+ *
+ * Nega «namuna» va nega ustida shuncha ogohlantirish bor: paket mijozning
+ * jumlasidan KALIT SO'Z bo'yicha taxmin qilinadi. Taxmin xato bo'lishi
+ * oddiy hol — «topshiriqlarim ro'yxati» degan jumla «ichki jarayonlar»
+ * paketiga tushib ketadi va model o'sha paketning ombor, xodim, hisobot
+ * modelini qurib beradi. Mijoz esa oddiy vazifa daftarchasini so'ragan
+ * edi.
+ *
+ * Shuning uchun paket buyruq emas, ILHOM sifatida beriladi va ustuvorlik
+ * ochiq yoziladi: mijozning jumlasi birinchi, namuna ikkinchi. Mos
+ * kelmasa — tashlab yuboriladi.
+ */
 function formatDomain(pack: DomainPack): string {
   return [
-    `## Domen: ${pack.nameUz}`,
+    `## Shunga o'xshash ilovalar odatda qanday tuziladi (${pack.nameUz})`,
+    "",
+    "BU MAJBURIY EMAS. Bu — shu sohadagi ilovalarning odatiy tuzilishi,",
+    "mijozning jumlasidan KALIT SO'Z bo'yicha taxmin qilingan. Taxmin xato",
+    "bo'lishi mumkin.",
+    "",
+    "Ustuvorlik: MIJOZNING JUMLASI birinchi. Quyidagi model unga mos",
+    "kelmasa — butunlay e'tiborsiz qoldir va mijoz so'ragan narsani qur.",
+    "Mijoz so'ramagan ekran yoki model qo'shma.",
+    "",
     pack.descriptionUz,
     "",
     "Ma'lumot modeli:",

@@ -33,6 +33,12 @@ Qachon "unclear" TANLAMA:
 
 "unclear" faqat BIRINCHI marta va tarixda hech qanday tafsilot bo'lmaganda.
 
+BATAFSIL SO'ROV HECH QACHON "unclear" EMAS.
+Agar foydalanuvchi funksiyalarni sanab bergan bo'lsa ("qo'shish, o'chirish,
+kategoriya, filtr, qidiruv") — bu tayyor texnik topshiriq. Savol berish
+uni xafa qiladi: u hamma narsani yozib bergan.
+Uzun va aniq so'rov -> "large". Qisqa va aniq -> "small_edit" yoki "medium".
+
 Qoidalar:
 - "unclear" bo'lsa clarifyingQuestionUz ga BITTA aniq savol yoz. Texnik atama ishlatma.
 - Yangi ilova yoki yangi ekran so'ralsa — "large".

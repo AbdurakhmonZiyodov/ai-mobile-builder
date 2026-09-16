@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentEvent } from "@amb/contracts";
 import type { Balance } from "@amb/core-rules";
 import { api } from "@/shared/api";
@@ -9,6 +9,16 @@ import { toTimelineEntry, type TimelineEntry } from "../timeline";
 interface UseAgentRunOptions {
   projectId: string;
   initialBalance: Balance;
+  /**
+   * Loyiha hali qurilmaganmi.
+   *
+   * Shunday bo'lsa, hook o'zi birinchi qurishni boshlaydi: mijoz
+   * g'oyasini yozgan va natijani kutyapti, undan yana bir tugma
+   * bosishni so'rash ortiqcha to'siq.
+   */
+  needsFirstBuild: boolean;
+  /** Sahifa ochilganda ko'rsatiladigan oldingi xabarlar. */
+  initialEntries?: TimelineEntry[];
   onFinished?: () => void;
 }
 
@@ -19,11 +29,30 @@ interface UseAgentRunOptions {
  * balansni yangilash) komponentdan mustaqil va alohida testlanadi.
  * Komponent faqat ko'rsatadi.
  */
-export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentRunOptions) {
-  const [entries, setEntries] = useState<TimelineEntry[]>([]);
+export function useAgentRun({
+  projectId,
+  initialBalance,
+  needsFirstBuild,
+  initialEntries = [],
+  onFinished,
+}: UseAgentRunOptions) {
+  const [entries, setEntries] = useState<TimelineEntry[]>(initialEntries);
   const [balance, setBalance] = useState<Balance>(initialBalance);
   const [busy, setBusy] = useState(false);
   const streamingId = useRef<string | null>(null);
+
+  /**
+   * Agent tekkan fayl yo'llari — oqim tartibida.
+   *
+   * Nega alohida holat, `entries` ichidan ajratib olinmaydi: qatorlar
+   * MIJOZ uchun tayyorlangan matn («app/index.tsx (+12 / −0)»), undan
+   * yo'lni qayta ajratib olish matn shaklini kod panelining ishlashiga
+   * bog'lab qo'yardi. Qator matni o'zgarganda panel jimgina buzilardi.
+   *
+   * Takror yo'l qo'shilaveradi: kod paneli OXIRGI tekkan faylni ochadi,
+   * shuning uchun bir fayl ikki marta tahrirlansa u yana ochilishi kerak.
+   */
+  const [changedPaths, setChangedPaths] = useState<string[]>([]);
 
   const push = useCallback((entry: TimelineEntry) => {
     setEntries((prev) => [...prev, entry]);
@@ -45,6 +74,29 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
     });
   }, []);
 
+  /** Ikkala oqim (suhbat va birinchi qurish) uchun umumiy ishlovchi. */
+  const handleEvent = useCallback(
+    (event: AgentEvent) => {
+      if (event.type === "text") {
+        appendText(event.delta);
+        return;
+      }
+      if (event.type === "charge") {
+        setBalance((prev) => applyCharge(prev, event.units));
+      }
+      if (event.type === "file.changed") {
+        setChangedPaths((prev) => [...prev, event.path]);
+      }
+      if (event.type === "run.finished") {
+        onFinished?.();
+      }
+
+      const entry = toTimelineEntry(event);
+      if (entry) push(entry);
+    },
+    [appendText, push, onFinished],
+  );
+
   const send = useCallback(
     async (text: string, designMode: boolean) => {
       if (busy || !text.trim()) return;
@@ -54,21 +106,11 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
       push({ id: crypto.randomUUID(), kind: "user", text });
 
       try {
-        await api.agent.stream({ projectId, text, designMode }, (event: AgentEvent) => {
-          if (event.type === "text") {
-            appendText(event.delta);
-            return;
-          }
-          if (event.type === "charge") {
-            setBalance((prev) => applyCharge(prev, event.units));
-          }
-          if (event.type === "run.finished") {
-            onFinished?.();
-          }
-
-          const entry = toTimelineEntry(event);
-          if (entry) push(entry);
-        });
+        // Ikkala oqim ham AYNAN bitta ishlovchidan o'tadi. Ilgari bu yerda
+        // o'sha mantiq qo'lda takrorlangan edi va yangi hodisa turi
+        // qo'shilganda faqat bitta joyda ishlab, ikkinchisida jimgina
+        // tushib qolardi.
+        await api.agent.stream({ projectId, text, designMode }, handleEvent);
       } catch (err) {
         push({
           id: crypto.randomUUID(),
@@ -79,10 +121,38 @@ export function useAgentRun({ projectId, initialBalance, onFinished }: UseAgentR
         setBusy(false);
       }
     },
-    [busy, projectId, push, appendText, onFinished],
+    [busy, projectId, push, handleEvent],
   );
 
-  return { entries, balance, busy, send };
+  /**
+   * Birinchi qurishni boshlaydi.
+   *
+   * `useRef` bilan qo'riqlanadi: React 19 development rejimida effektni
+   * ikki marta ishga tushiradi, ikkinchi chaqiruv esa serverda 409 olardi
+   * va mijoz xato ko'rardi.
+   */
+  const buildStarted = useRef(false);
+
+  useEffect(() => {
+    if (!needsFirstBuild || buildStarted.current) return;
+    buildStarted.current = true;
+
+    setBusy(true);
+    streamingId.current = null;
+
+    void api.agent
+      .buildFirst(projectId, (event: AgentEvent) => handleEvent(event))
+      .catch((err: unknown) =>
+        push({
+          id: crypto.randomUUID(),
+          kind: "error",
+          text: err instanceof Error ? err.message : "Ilovani qurib bo'lmadi.",
+        }),
+      )
+      .finally(() => setBusy(false));
+  }, [needsFirstBuild, projectId, handleEvent, push]);
+
+  return { entries, balance, busy, changedPaths, send };
 }
 
 /**

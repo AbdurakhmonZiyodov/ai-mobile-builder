@@ -45,10 +45,14 @@ export default async function ProjectsPage() {
                 <Card className="flex flex-wrap items-center gap-4 p-5 transition-colors hover:bg-surface-alt hover:border-line-strong">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-1 text-sm text-ink-faint">
-                      SDK {project.sdk}
-                      {project.domainPack ? ` · ${project.domainPack}` : ""}
-                    </p>
+                    {/*
+                      Domen paketining identifikatori ataylab ko'rsatilmaydi.
+                      U ichki tushuncha va «internal», «shop» kabi inglizcha
+                      kalit so'z sifatida chiqardi — mijoz uchun ma'nosiz,
+                      bundan ham yomoni: u so'ragan ilova qandaydir tayyor
+                      qolipga solingandek taassurot berardi.
+                    */}
+                    <p className="mt-1 text-sm text-ink-faint">SDK {project.sdk}</p>
                   </div>
 
                   <Badge tone={statusTone(project.status)}>{statusLabelUz(project.status)}</Badge>

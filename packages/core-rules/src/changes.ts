@@ -13,6 +13,7 @@ export const taskKinds = [
   "medium",        // "ekranga filtr qo'sh"
   "large",         // "yangi ekran qo'sh", "to'lov ulash"
   "repair",        // verify gate xatosini avtomatik tuzatish -> bepul
+  "first_build",   // promptdan birinchi ilova -> bepul (mijoz g'oyasini ko'radi)
 ] as const;
 
 export type TaskKind = (typeof taskKinds)[number];
@@ -27,6 +28,16 @@ const BILLABLE: Record<TaskKind, boolean> = {
   medium: true,
   large: true,
   repair: false,
+  /**
+   * Birinchi qurish BEPUL.
+   *
+   * Mijoz hali «Qurish» tarifiga o'tmagan — u g'oyasini ishlab turgan
+   * holda ko'rmoqchi. Bu «Design mode bepul» qoidasining davomi:
+   * pul so'rashdan oldin qiymatni ko'rsatamiz.
+   *
+   * Bizga qimmatga tushadi (~$0,25), lekin mijozni yo'qotish qimmatroq.
+   */
+  first_build: false,
 };
 
 export function isBillableKind(kind: TaskKind): boolean {
@@ -76,6 +87,8 @@ function reasonForFreeKind(kind: TaskKind): string {
       return "Design mode — bepul.";
     case "repair":
       return "Xato tuzatish — bepul.";
+    case "first_build":
+      return "Birinchi qurish — bepul.";
     default:
       return "Hisoblanmadi.";
   }
