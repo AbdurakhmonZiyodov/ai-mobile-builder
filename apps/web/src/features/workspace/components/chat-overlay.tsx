@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { RunPhase } from "@amb/contracts";
 import { Button } from "@/shared/ui";
+import type { CurrentActivity } from "../hooks/use-agent-run";
 import type { TimelineEntry, TimelineKind } from "../timeline";
+import { ActivityLine } from "./activity-line";
 import { FileGroup } from "./file-group";
+import { RunProgress } from "./run-progress";
 
 interface ChatOverlayProps {
   entries: TimelineEntry[];
   busy: boolean;
+  /** Jarayon holati — bosqich ko'rsatkichi va tirik qator uchun. */
+  phase: RunPhase | null;
+  reached: RunPhase[];
+  activity: CurrentActivity | null;
+  elapsedSec: number | null;
   onSend: (text: string, designMode: boolean) => void;
 }
 
@@ -22,7 +31,15 @@ interface ChatOverlayProps {
  * yuqori paneldagi «Do'konga chiqarish» — mahsulotning yakuniy maqsadi.
  * Oq tugma suhbat kartasi ichida baribir eng kuchli element.
  */
-export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
+export function ChatOverlay({
+  entries,
+  busy,
+  phase,
+  reached,
+  activity,
+  elapsedSec,
+  onSend,
+}: ChatOverlayProps) {
   const [open, setOpen] = useState(true);
   const [input, setInput] = useState("");
   const [designMode, setDesignMode] = useState(false);
@@ -31,7 +48,7 @@ export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
   // Yangi qator qo'shilganda pastga suramiz — mijoz oxirgi holatni ko'rsin.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [entries.length]);
+  }, [entries.length, activity?.labelUz, activity?.repeat]);
 
   if (!open) {
     return (
@@ -43,19 +60,26 @@ export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
 
   return (
     <div className="panel-tall flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <span className="flex items-center gap-2.5 font-medium">
-          Suhbat
-          {busy ? <span className="text-xs font-normal text-accent-soft">ishlayapman…</span> : null}
-        </span>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          aria-label="Suhbatni yopish"
-          className="rounded-full px-2 text-lg leading-none text-ink-faint transition-colors hover:text-ink"
-        >
-          ×
-        </button>
+      <header className="space-y-2.5 border-b border-line px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Suhbat</span>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Suhbatni yopish"
+            className="rounded-full px-2 text-lg leading-none text-ink-faint transition-colors hover:text-ink"
+          >
+            ×
+          </button>
+        </div>
+
+        {/*
+          Bosqich ko'rsatkichi SARLAVHADA, oqim ichida emas: oqim surilib
+          ketadi va mijoz «qayerdamiz?» degan savolga javob olish uchun
+          har safar pastga tushishi kerak bo'lardi. Bu yerda u doim
+          ko'z oldida turadi.
+        */}
+        <RunProgress phase={phase} reached={reached} elapsedSec={elapsedSec} />
       </header>
 
       <div className="flex-1 space-y-1.5 overflow-y-auto px-3 py-3">
@@ -74,6 +98,20 @@ export function ChatOverlay({ entries, busy, onSend }: ChatOverlayProps) {
             </div>
           ),
         )}
+        {/*
+          Tirik qator — tarixga YOZILMAYDI, har yangi harakatda o'rniga
+          almashadi. Ilgari har harakat alohida qator bo'lib qolardi va
+          «Kodni o'qiyapman…» besh marta takrorlanib, mijozning o'z savolini
+          ekrandan surib yuborardi.
+        */}
+        {busy && activity ? (
+          <ActivityLine
+            labelUz={activity.labelUz}
+            repeat={activity.repeat}
+            elapsedSec={elapsedSec ?? 0}
+          />
+        ) : null}
+
         <div ref={bottomRef} />
       </div>
 
@@ -155,4 +193,10 @@ const ROW_STYLES: Record<TimelineKind, string> = {
   file: "px-3.5 py-1 font-mono text-xs text-ink-faint",
   charge: "rounded-2xl bg-accent-surface px-3.5 py-2 text-sm text-accent-soft",
   error: "rounded-2xl bg-danger-surface px-3.5 py-2 text-sm text-danger whitespace-pre-wrap",
+  /*
+    Yakun ataylab boshqa hammasidan kuchliroq: mijoz uchun ekrandagi eng
+    muhim xabar «tugadi» degani. Ilgari oqim shunchaki to'xtardi va u
+    ekranga qarab kutib o'tirardi.
+  */
+  done: "rounded-2xl border border-success/40 bg-success-surface px-3.5 py-2.5 text-sm font-medium text-success",
 };

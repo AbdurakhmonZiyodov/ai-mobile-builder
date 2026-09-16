@@ -42,3 +42,50 @@ const TOOL_LABELS: Record<string, string> = {
 export function toolLabelUz(tool: string): string {
   return TOOL_LABELS[tool] ?? tool;
 }
+
+/**
+ * Ish bosqichlari — mijoz jarayonni bosqich sifatida ko'radi.
+ *
+ * NEGA KERAK. Oqimda «Kodni o'qiyapman…» ketma-ket besh marta, «Loyihani
+ * ko'ryapman…» to'rt marta chiqadi. Har biri to'g'ri, lekin ular birgalikda
+ * bir xil ko'rinadigan devor hosil qiladi: mijoz na qaysi bosqichda
+ * ekanini, na ish tugaganini biladi. Bosqich — o'nlab mayda qadamni
+ * mijoz kuzata oladigan beshta katta qadamga yig'adi.
+ *
+ * NEGA BU YERDA, veb ichida emas: bosqich `tool` nomidan chiqariladi va
+ * `TOOL_LABELS` bilan YONMA-YON turishi kerak. Yangi tool qo'shilganda
+ * uning yorlig'i va bosqichi bir vaqtda ko'rinadi — ikki faylga bo'linsa,
+ * ikkinchisi albatta unutiladi va yangi tool bosqichsiz qoladi.
+ */
+export const runPhases = [
+  "understanding",
+  "planning",
+  "exploring",
+  "writing",
+  "verifying",
+  "done",
+  "failed",
+] as const;
+export type RunPhase = (typeof runPhases)[number];
+
+/**
+ * Tool qaysi bosqichga tegishli.
+ *
+ * O'qish va qidirish — «o'rganish», fayl o'zgartirish — «yozish». Bu farq
+ * mijoz uchun muhim: birinchisida hali hech narsa o'zgarmagan, ikkinchisida
+ * uning ilovasi tegib bo'lingan.
+ */
+const TOOL_PHASES: Record<string, RunPhase> = {
+  list_files: "exploring",
+  read_file: "exploring",
+  search_files: "exploring",
+  edit_file: "writing",
+  create_file: "writing",
+  delete_file: "writing",
+  update_design_note: "writing",
+};
+
+/** Noma'lum tool «o'rganish» deb hisoblanadi — u hech narsani buzmaydi. */
+export function toolPhase(tool: string): RunPhase {
+  return TOOL_PHASES[tool] ?? "exploring";
+}

@@ -1,6 +1,14 @@
-import { toolLabelUz, verifyLabelUz, type AgentEvent } from "@amb/contracts";
+import { toolLabelUz, toolPhase, verifyLabelUz, type AgentEvent, type RunPhase } from "@amb/contracts";
 
-export type TimelineKind = "user" | "agent" | "step" | "file" | "verify" | "charge" | "error";
+export type TimelineKind =
+  | "user"
+  | "agent"
+  | "step"
+  | "file"
+  | "verify"
+  | "charge"
+  | "error"
+  | "done";
 
 export interface TimelineEntry {
   id: string;
@@ -67,10 +75,91 @@ export function toTimelineEntry(event: AgentEvent): TimelineEntry | null {
     case "error":
       return { id, kind: "error", text: event.messageUz };
 
+    /**
+     * Ish tugadi — mijoz uchun eng muhim qator.
+     *
+     * Ilgari bu hodisa JIMGINA yutilardi: oqim shunchaki to'xtardi va
+     * mijoz ekranga qarab «tugadimi yoki qotib qoldimi?» deb o'tirardi.
+     * Endi tugash ochiq aytiladi va qancha vaqt ketgani yoziladi —
+     * kutish uzoq tuyulmasligi uchun.
+     */
+    case "run.finished":
+      return {
+        id,
+        kind: event.ok ? "done" : "error",
+        text: event.ok
+          ? `Tayyor — ${formatDurationUz(event.durationMs)}da bajarildi.`
+          : "Ish tugallanmadi.",
+      };
+
     default:
-      // run.started, run.finished, text, plan, tool.finished — ko'rsatilmaydi
+      // run.started, text, plan, tool.finished — ko'rsatilmaydi
       return null;
   }
+}
+
+/**
+ * Hodisadan ish bosqichini aniqlaydi.
+ *
+ * `null` — bu hodisa bosqichni o'zgartirmaydi (masalan matn bo'lagi yoki
+ * hisob). Bosqich faqat HAQIQATAN yangi bosqich boshlanganda almashadi,
+ * aks holda ko'rsatkich oldinga-orqaga sakrab, mijozni chalg'itardi.
+ */
+export function phaseFor(event: AgentEvent): RunPhase | null {
+  switch (event.type) {
+    case "run.classified":
+    case "clarify":
+      return "understanding";
+
+    case "plan":
+      return "planning";
+
+    case "tool.started":
+      return toolPhase(event.tool);
+
+    case "file.changed":
+      return "writing";
+
+    case "verify.started":
+    case "verify.finished":
+    case "repair.attempt":
+      return "verifying";
+
+    case "repair.gaveUp":
+    case "error":
+      return "failed";
+
+    case "run.finished":
+      return event.ok ? "done" : "failed";
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Hozirgi harakatning mijoz o'qiydigan nomi.
+ *
+ * Bu `toTimelineEntry` dan alohida, chunki tirik qator (`ActivityLine`)
+ * tarixga yozilmaydi — u faqat AYNI PAYTDAGI holatni ko'rsatadi va
+ * keyingi harakat kelganda o'rniga almashadi.
+ */
+export function activityLabelUz(event: AgentEvent): string | null {
+  if (event.type === "tool.started") return toolLabelUz(event.tool);
+  if (event.type === "verify.started") return verifyLabelUz(event.step);
+  if (event.type === "repair.attempt") return "Xatoni tuzatyapman";
+  return null;
+}
+
+/** «45 soniya», «2 daqiqa 5 soniya» — mijoz millisekundni o'qimaydi. */
+function formatDurationUz(ms: number): string {
+  const total = Math.max(1, Math.round(ms / 1000));
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+
+  if (min === 0) return `${sec} soniya`;
+  if (sec === 0) return `${min} daqiqa`;
+  return `${min} daqiqa ${sec} soniya`;
 }
 
 function verifyResultUz(

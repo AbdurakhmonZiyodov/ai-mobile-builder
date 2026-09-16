@@ -1,10 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentEvent } from "@amb/contracts";
+import type { AgentEvent, RunPhase } from "@amb/contracts";
 import type { Balance } from "@amb/core-rules";
 import { api } from "@/shared/api";
-import { toTimelineEntry, type TimelineEntry } from "../timeline";
+import { activityLabelUz, phaseFor, toTimelineEntry, type TimelineEntry } from "../timeline";
+
+/** Ayni paytda bajarilayotgan harakat — tarixga yozilmaydi, o'rniga almashadi. */
+export interface CurrentActivity {
+  labelUz: string;
+  /** Shu harakat ketma-ket necha marta takrorlandi. */
+  repeat: number;
+}
 
 interface UseAgentRunOptions {
   projectId: string;
@@ -54,6 +61,81 @@ export function useAgentRun({
    */
   const [changedPaths, setChangedPaths] = useState<string[]>([]);
 
+  /**
+   * Jarayon holati.
+   *
+   * NEGA KERAK. Mijoz oqimda «Kodni o'qiyapman…» ni ketma-ket besh marta
+   * ko'rardi va na qaysi bosqichda ekanini, na ish tugaganini bilardi.
+   * Uchta holat shu savolga javob beradi: qaysi BOSQICH, hozir NIMA
+   * qilinyapti, QANCHA vaqt o'tdi.
+   *
+   * `reached` — o'tilgan bosqichlar. Bosqich orqaga qaytishi mumkin
+   * (yozgandan keyin yana o'qish), shuning uchun «hozirgi» dan tashqari
+   * «o'tilgan» ro'yxati alohida saqlanadi — aks holda ko'rsatkichdagi
+   * belgilar oldinga-orqaga sakrardi.
+   */
+  const [phase, setPhase] = useState<RunPhase | null>(null);
+  const [reached, setReached] = useState<RunPhase[]>([]);
+  const [activity, setActivity] = useState<CurrentActivity | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsedSec, setElapsedSec] = useState<number | null>(null);
+
+  /**
+   * Soat. Faqat ish ketayotganda yuradi.
+   *
+   * Nega har soniyada: mijoz uchun «harakat bor» signalining o'zi muhim —
+   * agent uzoq o'ylayotganda ekranda hech narsa o'zgarmasa, u sahifa
+   * qotib qolgan deb o'ylaydi.
+   */
+  useEffect(() => {
+    if (startedAt === null) return;
+
+    setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    const timer = setInterval(
+      () => setElapsedSec(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [startedAt]);
+
+  /**
+   * Shu ishda birorta fayl o'zgardimi.
+   *
+   * NEGA REF, holat emas: qiymat `handleEvent` ichida darhol o'qilishi
+   * kerak, React esa holat yangilanishini keyingi renderga qoldiradi —
+   * `run.finished` kelganda holat hali eski bo'lardi.
+   */
+  const touchedFiles = useRef(false);
+
+  /** Yangi ish boshlanishi — oldingi ishning holati tozalanadi. */
+  const beginRun = useCallback(() => {
+    touchedFiles.current = false;
+    setPhase("understanding");
+    setReached(["understanding"]);
+    setActivity(null);
+    setStartedAt(Date.now());
+    setBusy(true);
+    streamingId.current = null;
+  }, []);
+
+  /**
+   * Ish tugadi. `startedAt` tozalanadi — soat to'xtaydi.
+   *
+   * `ok` ataylab argument: oqim xato bilan uzilsa, server `run.finished`
+   * hodisasini umuman yubormaydi va bosqich oxirgi holatida qotib qoladi.
+   * Uni ko'r-ko'rona «Tayyor» deb belgilash yolg'on bo'lardi — mahsulotning
+   * butun va'dasi ishonchda.
+   */
+  const endRun = useCallback((ok: boolean) => {
+    setBusy(false);
+    setActivity(null);
+    setStartedAt(null);
+    setPhase((prev) => {
+      if (prev === "done" || prev === "failed") return prev;
+      return ok ? "done" : "failed";
+    });
+  }, []);
+
   const push = useCallback((entry: TimelineEntry) => {
     setEntries((prev) => [...prev, entry]);
   }, []);
@@ -84,10 +166,41 @@ export function useAgentRun({
       if (event.type === "charge") {
         setBalance((prev) => applyCharge(prev, event.units));
       }
+      const next = phaseFor(event);
+      if (next) {
+        setPhase(next);
+        setReached((prev) => (prev.includes(next) ? prev : [...prev, next]));
+      }
+
+      /*
+       * Takroriy harakat yangi qator ochmaydi, hisoblagichni oshiradi:
+       * «Kodni o'qiyapman ×5». Besh alohida qator bir xil ko'rinadi va
+       * mijozning o'z savolini ekrandan surib yuboradi.
+       */
+      const label = activityLabelUz(event);
+      if (label) {
+        setActivity((prev) =>
+          prev && prev.labelUz === label
+            ? { labelUz: label, repeat: prev.repeat + 1 }
+            : { labelUz: label, repeat: 1 },
+        );
+      }
+
       if (event.type === "file.changed") {
+        touchedFiles.current = true;
         setChangedPaths((prev) => [...prev, event.path]);
       }
-      if (event.type === "run.finished") {
+
+      /*
+       * Preview FAQAT fayl o'zgarganda qayta yig'iladi.
+       *
+       * Ilgari u har ish oxirida ishga tushardi — hatto bepul savolda
+       * ham. Mijoz «tugma qayerda?» deb so'raganida ilovasi sakkiz
+       * soniya «Yig'ilmoqda…» bo'lib turardi va u nimadir o'zgarganini
+       * o'ylardi. Hech narsa o'zgarmagan bo'lsa, qayta yig'ishning
+       * natijasi ham aynan eskisi bo'ladi.
+       */
+      if (event.type === "run.finished" && touchedFiles.current) {
         onFinished?.();
       }
 
@@ -101,8 +214,7 @@ export function useAgentRun({
     async (text: string, designMode: boolean) => {
       if (busy || !text.trim()) return;
 
-      setBusy(true);
-      streamingId.current = null;
+      beginRun();
       push({ id: crypto.randomUUID(), kind: "user", text });
 
       try {
@@ -111,17 +223,17 @@ export function useAgentRun({
         // qo'shilganda faqat bitta joyda ishlab, ikkinchisida jimgina
         // tushib qolardi.
         await api.agent.stream({ projectId, text, designMode }, handleEvent);
+        endRun(true);
       } catch (err) {
         push({
           id: crypto.randomUUID(),
           kind: "error",
           text: err instanceof Error ? err.message : "Oqim uzildi.",
         });
-      } finally {
-        setBusy(false);
+        endRun(false);
       }
     },
-    [busy, projectId, push, handleEvent],
+    [busy, projectId, push, handleEvent, beginRun, endRun],
   );
 
   /**
@@ -137,22 +249,22 @@ export function useAgentRun({
     if (!needsFirstBuild || buildStarted.current) return;
     buildStarted.current = true;
 
-    setBusy(true);
-    streamingId.current = null;
+    beginRun();
 
     void api.agent
       .buildFirst(projectId, (event: AgentEvent) => handleEvent(event))
-      .catch((err: unknown) =>
+      .then(() => endRun(true))
+      .catch((err: unknown) => {
         push({
           id: crypto.randomUUID(),
           kind: "error",
           text: err instanceof Error ? err.message : "Ilovani qurib bo'lmadi.",
-        }),
-      )
-      .finally(() => setBusy(false));
-  }, [needsFirstBuild, projectId, handleEvent, push]);
+        });
+        endRun(false);
+      });
+  }, [needsFirstBuild, projectId, handleEvent, push, beginRun, endRun]);
 
-  return { entries, balance, busy, changedPaths, send };
+  return { entries, balance, busy, changedPaths, phase, reached, activity, elapsedSec, send };
 }
 
 /**

@@ -105,7 +105,15 @@ export function WorkspaceView({
         <div className="grid min-w-0 flex-1 gap-5 p-5 lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
           {/* Suhbat — chapda, doim bir xil kenglikda. */}
           <div className="min-w-0 lg:order-1">
-            <ChatOverlay entries={run.entries} busy={run.busy} onSend={run.send} />
+            <ChatOverlay
+              entries={run.entries}
+              busy={run.busy}
+              phase={run.phase}
+              reached={run.reached}
+              activity={run.activity}
+              elapsedSec={run.elapsedSec}
+              onSend={run.send}
+            />
           </div>
 
           {/* Markaz: ilova yoki uning kodi. */}
